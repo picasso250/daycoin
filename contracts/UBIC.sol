@@ -2,12 +2,13 @@
 pragma solidity 0.8.30;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @notice One deposit locks exactly 0.1 ETH. One claim closes one position,
 /// refunds its ETH and mints 1 UBIC per completed 24-hour period.
 /// @dev No owner, upgrade, batch endpoint, arbitrary mint or rescue function.
-contract UBIC is ERC20, ReentrancyGuard {
+contract UBIC is ERC20Burnable, ReentrancyGuard {
     uint256 public constant DEPOSIT = 0.1 ether;
     uint256 public constant PERIOD = 1 days;
     uint256 public constant REWARD = 10_000; // 1 UBIC = 10,000 xiao (肖).
@@ -18,10 +19,12 @@ contract UBIC is ERC20, ReentrancyGuard {
     }
 
     mapping(address => uint256) public nextPositionId;
+    mapping(address => bool) public hasActivePosition;
     mapping(address => mapping(uint256 => Position)) public positions;
     uint256 public totalPrincipal;
 
     error InvalidDeposit();
+    error ActivePositionExists();
     error InactivePosition();
     error EtherTransferFailed();
 
@@ -34,10 +37,12 @@ contract UBIC is ERC20, ReentrancyGuard {
         return 4;
     }
 
-    /// @notice One call creates one position. No top-ups or fractional deposits.
+    /// @notice At most one active position per address. No top-ups.
     function deposit() external payable nonReentrant returns (uint256 id) {
         if (msg.value != DEPOSIT) revert InvalidDeposit();
+        if (hasActivePosition[msg.sender]) revert ActivePositionExists();
         id = nextPositionId[msg.sender]++;
+        hasActivePosition[msg.sender] = true;
         positions[msg.sender][id] = Position(block.timestamp, true);
         totalPrincipal += DEPOSIT;
         emit Deposited(msg.sender, id);
@@ -52,6 +57,7 @@ contract UBIC is ERC20, ReentrancyGuard {
         reward = ((block.timestamp - p.depositedAt) / PERIOD) * REWARD;
 
         delete positions[msg.sender][id];
+        hasActivePosition[msg.sender] = false;
         totalPrincipal -= DEPOSIT;
         if (reward != 0) _mint(msg.sender, reward);
         emit Claimed(msg.sender, id, reward);

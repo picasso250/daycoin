@@ -19,7 +19,7 @@ UBIC V1：三条核心规则
 
 ## 固定规则
 
-- `deposit()` 必须携带恰好 0.1 ETH，多或少 1 wei 都失败。每次新建独立仓位，ID 按用户递增且不复用。
+- `deposit()` 必须携带恰好 0.1 ETH，多或少 1 wei 都失败。同地址已有活跃仓位时禁止再次存款；退出后可重新存款。ID 按用户递增且不复用，旧 ID 不能用于领取新仓位。
 - `claim(id)` 只处理调用者的一个仓位。无批量接口、部分提款或单独领取奖励接口。
 - 未满 24 小时：退回 0.1 ETH，0 UBIC。
 - 满 24 小时：退回 0.1 ETH，1 UBIC。
@@ -29,6 +29,8 @@ UBIC V1：三条核心规则
 - 每次退回本金严格为 0.1 ETH，用户钱包余额净变化还要扣除 gas。
 - 名称和符号均为 `UBIC`；**4 位小数，1 UBIC = 10,000 肖**。所有 ERC-20 金额参数和余额以肖为单位，`transfer(to, 1)` 转出 1 肖。
 - 初始供应量为零，无人为总量上限；成熟额度在 claim 前不计入 `totalSupply()`。
+- 使用 OpenZeppelin `ERC20Burnable`：`burn(amount)` 自愿销毁自己的币；`burnFrom(account, amount)` 只能在该账户 ERC-20 allowance 授权范围内销毁，并消耗授权（无限授权遵循标准行为）。普通 `approve` 也赋予相应的授权销毁能力。
+- 销毁金额以肖计，`burn(1)` 销毁 1 肖，`burn(10000)` 销毁 1 UBIC。销毁减少余额及 `totalSupply()`，产生转入零地址的 `Transfer` 事件；不可恢复，不退 ETH，也不改变仓位、未来奖励或计时。没有管理员强制销毁权限。
 - 无 owner、代理、升级、暂停、参数修改、管理员增发或救援提款。直接部署本体，不部署代理。
 
 每份本金每天产生一份额度，无法识别人或人口。移除批量接口只要求每份单独调用，**不能强制手动操作、每人一份或每笔交易只含一次调用**：脚本能发送多次交易，外部合约也能在一笔交易中顺序调用多次。防重入阻止的是尚未完成的调用中的嵌套进入。
@@ -41,10 +43,13 @@ claim(uint256 id) returns (uint256 reward)
 pending(address account, uint256 id) view returns (uint256)
 positions(address account, uint256 id) view returns (uint256 depositedAt, bool active)
 nextPositionId(address account) view returns (uint256)
+hasActivePosition(address account) view returns (bool)
 totalPrincipal() view returns (uint256)
+burn(uint256 amount)
+burnFrom(address account, uint256 amount)
 ```
 
-监听 `Deposited(account, id)` 获取仓位 ID。`pending()` 返回当前完整天数对应的肖数量，已关闭或不存在的仓位返回零。重复或不存在仓位的 claim 会失败。两个 0.1 ETH 仓位各存 12 小时，均没有奖励，不能合并成 1 UBIC。
+监听 `Deposited(account, id)` 获取仓位 ID。`pending()` 返回当前完整天数对应的肖数量，已关闭或不存在的仓位返回零。重复或不存在仓位的 claim 会失败。不同地址各存 12 小时，均没有奖励，不能合并成 1 UBIC。一个地址一个仓位不等于一个人一个仓位。
 
 本金和奖励都返回调用者。合约钱包必须能够接收 ETH；若拒收，整个 claim 回滚，仓位和奖励保持原状。没有其他收款地址或救援接口，因此不要通过无法接收 ETH 的合约存款。
 
@@ -76,6 +81,6 @@ npm run build
 
 锁文件固定依赖；构建生成 `artifacts/UBIC.json`，含 ABI 和字节码，构造函数无参数。测试使用本地 Ganache Shanghai EVM，并主动启用其 JavaScript 后备实现以避免 Node 原生扩展版本不匹配。
 
-测试覆盖：精确存款金额、提前退出的本金与 gas 对账、24 小时边界、逐仓位领取与权限隔离、多日累计与重新存入、重入攻击、拒收退款的完整回滚、1 肖转账和授权、非存款 ETH 不改变本金或奖励。非存款余额测试通过节点 RPC 模拟账本外资金流入。
+测试覆盖：精确存款金额、同地址重复存款拒绝、退出后重开、旧 ID 拒绝、提前退出的本金与 gas 对账、24 小时边界、权限隔离、多日累计、重入攻击、拒收退款的完整回滚、1 肖转账和授权、自愿销毁、授权销毁与失败回滚、销毁不影响本金或未来发行、非存款 ETH 不改变本金或奖励。非存款余额测试通过节点 RPC 模拟账本外资金流入。
 
 测试不构成独立安全审计，也不能证明绝无 bug。

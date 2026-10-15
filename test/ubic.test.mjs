@@ -94,22 +94,32 @@ test('exactly 24h earns 10,000 xiao and returns principal', async t => {
   assert.equal(await token.pending(alice.address, 0), 0n);
 });
 
-test('one independently timed position per claim; accounts are isolated', async t => {
+test('one active position per address, independent accounts and stale IDs rejected', async t => {
   const { token, alice, bob, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
+  const original = await token.positions(alice.address, 0);
   await advance(DAY / 2);
-  await send(token.deposit({ value: UNIT }));
-  await advance(DAY / 2);
+  await assert.rejects(send(token.deposit({ value: UNIT, gasLimit: 200000 })));
+  assert.equal(await token.hasActivePosition(alice.address), true);
+  assert.equal(await token.nextPositionId(alice.address), 1n);
+  assert.equal((await token.positions(alice.address, 0)).depositedAt, original.depositedAt);
   await assert.rejects(token.connect(bob).claim.staticCall(0));
+  await send(token.connect(bob).deposit({ value: UNIT }));
+  await advance(DAY / 2);
   await assert.rejects(token.claim.staticCall(100));
   await send(token.claim(0));
   assert.equal(await token.balanceOf(alice.address), TOKEN);
   assert.equal(await token.totalPrincipal(), UNIT);
-  assert.equal((await token.positions(alice.address, 1)).active, true);
-  assert.equal(await token.pending(alice.address, 1), 0n);
+  assert.equal(await token.hasActivePosition(alice.address), false);
+  assert.equal(await token.hasActivePosition(bob.address), true);
+  assert.equal(await token.pending(bob.address, 0), 0n);
+  await send(token.deposit({ value: UNIT }));
+  await assert.rejects(token.claim.staticCall(0));
   await advance(DAY / 2);
-  await send(token.claim(1));
-  assert.equal(await token.balanceOf(alice.address), 2n * TOKEN);
+  await send(token.connect(bob).claim(0));
+  assert.equal(await token.balanceOf(bob.address), TOKEN);
+  assert.equal(await token.pending(alice.address, 1), 0n);
+  assert.equal(await token.totalPrincipal(), UNIT);
 });
 
 test('multiple days accrue; closing discards fractions and redeposit starts anew', async t => {
@@ -132,11 +142,11 @@ test('reentry blocked; failed refund rolls back mint, balance and position delet
   await receiver.waitForDeployment();
   const address = await receiver.getAddress();
   await send(receiver.deposit({ value: UNIT }));
-  await send(receiver.deposit({ value: UNIT }));
   await advance(DAY);
   await send(receiver.setReject(true));
   await assert.rejects(send(receiver.claim(0, { gasLimit: 500000 })));
-  assert.equal(await token.totalPrincipal(), 2n * UNIT);
+  assert.equal(await token.totalPrincipal(), UNIT);
+  assert.equal(await token.hasActivePosition(address), true);
   assert.equal(await token.totalSupply(), 0n);
   assert.equal(await token.balanceOf(address), 0n);
   assert.equal((await token.positions(address, 0)).active, true);
@@ -144,9 +154,10 @@ test('reentry blocked; failed refund rolls back mint, balance and position delet
   await send(receiver.claim(0, { gasLimit: 500000 }));
   assert.equal(await receiver.blocked(), 3n);
   assert.equal(await receiver.received(), UNIT);
-  assert.equal(await token.totalPrincipal(), UNIT);
+  assert.equal(await token.totalPrincipal(), 0n);
+  assert.equal(await token.hasActivePosition(address), false);
   assert.equal(await token.balanceOf(address), TOKEN);
-  assert.equal((await token.positions(address, 1)).active, true);
+  assert.equal((await token.positions(address, 0)).active, false);
 });
 
 test('one xiao transfers and allowances use four-decimal base units', async t => {
@@ -161,6 +172,51 @@ test('one xiao transfers and allowances use four-decimal base units', async t =>
   assert.equal(await token.balanceOf(bob.address), 3n);
   assert.equal(await token.allowance(alice.address, bob.address), 0n);
   assert.equal(await token.totalSupply(), TOKEN);
+});
+
+test('self burn reduces balance and supply without affecting active principal or rewards', async t => {
+  const { token, alice, provider, send, advance } = await fixture(t);
+  await send(token.deposit({ value: UNIT }));
+  await advance(DAY);
+  await send(token.claim(0));
+  await send(token.deposit({ value: UNIT }));
+  await advance(DAY);
+  const receipt = await send(token.burn(1));
+  const event = receipt.logs.map(log => token.interface.parseLog(log)).find(log => log?.name === 'Transfer');
+  assert.equal(event.args.from, alice.address);
+  assert.equal(event.args.to, '0x0000000000000000000000000000000000000000');
+  assert.equal(event.args.value, 1n);
+  assert.equal(await token.balanceOf(alice.address), TOKEN - 1n);
+  assert.equal(await token.totalSupply(), TOKEN - 1n);
+  assert.equal(await token.hasActivePosition(alice.address), true);
+  assert.equal(await token.totalPrincipal(), UNIT);
+  assert.equal(await provider.getBalance(await token.getAddress()), UNIT);
+  assert.equal(await token.pending(alice.address, 1), TOKEN);
+  await assert.rejects(token.burn.staticCall(TOKEN));
+  await send(token.burn(TOKEN - 1n));
+  assert.equal(await token.totalSupply(), 0n);
+  await send(token.claim(1));
+  assert.equal(await token.totalSupply(), TOKEN);
+  assert.equal(await token.totalPrincipal(), 0n);
+});
+
+test('burnFrom requires allowance and consumes it; failed burns roll back allowance', async t => {
+  const { token, alice, bob, send, advance } = await fixture(t);
+  await send(token.deposit({ value: UNIT }));
+  await advance(DAY);
+  await send(token.claim(0));
+  await assert.rejects(token.connect(bob).burnFrom.staticCall(alice.address, 1));
+  await send(token.approve(bob.address, 3));
+  await send(token.connect(bob).burnFrom(alice.address, 2));
+  assert.equal(await token.allowance(alice.address, bob.address), 1n);
+  assert.equal(await token.balanceOf(alice.address), TOKEN - 2n);
+  assert.equal(await token.totalSupply(), TOKEN - 2n);
+  assert.equal(await token.balanceOf(bob.address), 0n);
+  await assert.rejects(token.connect(bob).burnFrom.staticCall(alice.address, 2));
+  await send(token.approve(bob.address, TOKEN));
+  await assert.rejects(send(token.connect(bob).burnFrom(alice.address, TOKEN, { gasLimit: 200000 })));
+  assert.equal(await token.allowance(alice.address, bob.address), TOKEN);
+  assert.equal(await token.totalSupply(), TOKEN - 2n);
 });
 
 test('unaccounted ETH neither increases refund nor creates rewards', async t => {
