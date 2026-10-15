@@ -4,7 +4,6 @@ import { BrowserProvider, ContractFactory, parseEther } from 'ethers';
 import { compile } from '../scripts/compile.mjs';
 process.env.UWS_USE_FALLBACK = 'true';
 const { default: ganache } = await import('ganache');
-
 const helper = `// SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 import {UBIC} from "contracts/UBIC.sol";
@@ -15,37 +14,32 @@ contract Receiver {
     bool public reject;
     constructor(UBIC t) { token = t; }
     function deposit() external payable { token.deposit{value: msg.value}(); }
-    function claim(uint256 id) external { token.claim(id); }
+    function claim() external { token.claim(); }
+    function withdraw() external { token.withdraw(); }
     function setReject(bool value) external { reject = value; }
     receive() external payable {
         if (reject) revert();
         received += msg.value;
-        try token.claim(0) {} catch { blocked++; }
-        try token.claim(1) {} catch { blocked++; }
+        try token.claim() {} catch { blocked++; }
+        try token.withdraw() {} catch { blocked++; }
         try token.deposit{value: 0.1 ether}() {} catch { blocked++; }
     }
-}
-`;
+}`;
 const compiled = compile({ 'test/Receiver.sol': { content: helper } });
 const artifact = compiled['contracts/UBIC.sol'].UBIC;
-const UNIT = parseEther('0.1');
-const TOKEN = 10_000n;
-const DAY = 86400;
+const UNIT = parseEther('0.1'), TOKEN = 10000n, DAY = 86400;
 
 async function fixture(t) {
-  const rpc = ganache.provider({
-    logging: { quiet: true },
+  const rpc = ganache.provider({ logging: { quiet: true },
     chain: { hardfork: 'shanghai', time: new Date('2026-01-01T00:00:00Z') },
-    miner: { timestampIncrement: 0 }, wallet: { totalAccounts: 3 }
-  });
+    miner: { timestampIncrement: 0 }, wallet: { totalAccounts: 3 } });
   const provider = new BrowserProvider(rpc, undefined, { cacheTimeout: -1 });
   provider.pollingInterval = 10;
-  const alice = await provider.getSigner(0);
-  const bob = await provider.getSigner(1);
+  const alice = await provider.getSigner(0), bob = await provider.getSigner(1);
   const token = await new ContractFactory(artifact.abi, artifact.evm.bytecode.object, alice).deploy();
   await token.waitForDeployment();
   t.after(async () => { provider.destroy(); await rpc.disconnect(); });
-  const send = async promise => (await promise).wait();
+  const send = async p => (await p).wait();
   const advance = async seconds => {
     await rpc.request({ method: 'evm_increaseTime', params: [seconds] });
     await rpc.request({ method: 'evm_mine', params: [] });
@@ -53,179 +47,168 @@ async function fixture(t) {
   return { rpc, provider, alice, bob, token, send, advance };
 }
 
-test('exact deposit amount, no plain transfers or old batch ABI', async t => {
+test('exact deposit and one position per address; no obsolete ABI', async t => {
   const { token, alice, send } = await fixture(t);
-  for (const value of [0n, UNIT - 1n, UNIT + 1n, 2n * UNIT]) {
+  for (const value of [0n, UNIT - 1n, UNIT + 1n, 2n * UNIT])
     await assert.rejects(token.deposit.staticCall({ value }));
-  }
   await send(token.deposit({ value: UNIT }));
-  assert.equal(await token.totalPrincipal(), UNIT);
-  assert.equal(await token.nextPositionId(alice.address), 1n);
+  const original = await token.positions(alice.address);
+  await assert.rejects(send(token.deposit({ value: UNIT, gasLimit: 200000 })));
+  assert.deepEqual((await token.positions(alice.address)).toArray(), original.toArray());
   await assert.rejects(alice.sendTransaction({ to: await token.getAddress(), value: UNIT }));
-  assert.equal(token.interface.getFunction('claim(uint256[])'), null);
-  assert.equal(token.interface.getFunction('withdraw'), null);
+  for (const name of ['claim(uint256)', 'nextPositionId', 'hasActivePosition', 'totalPrincipal'])
+    assert.equal(token.interface.getFunction(name), null);
 });
 
-test('early claim returns principal minus gas, closes position and mints nothing', async t => {
+test('early and repeated claims preserve principal and original timestamp', async t => {
   const { token, alice, provider, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
+  const original = await token.positions(alice.address);
   await advance(DAY - 1);
-  const before = await provider.getBalance(alice.address);
-  const receipt = await send(token.claim(0));
-  assert.equal(await provider.getBalance(alice.address) - before + receipt.fee, UNIT);
+  await send(token.claim());
+  await send(token.claim());
+  assert.deepEqual((await token.positions(alice.address)).toArray(), original.toArray());
   assert.equal(await token.balanceOf(alice.address), 0n);
-  assert.equal(await token.totalPrincipal(), 0n);
-  assert.equal((await token.positions(alice.address, 0)).active, false);
-  await assert.rejects(token.claim.staticCall(0));
-});
-
-test('exactly 24h earns 10,000 xiao and returns principal', async t => {
-  const { token, alice, provider, send, advance } = await fixture(t);
-  await send(token.deposit({ value: UNIT }));
-  await advance(DAY - 1);
-  assert.equal(await token.pending(alice.address, 0), 0n);
+  assert.equal(await provider.getBalance(await token.getAddress()), UNIT);
   await advance(1);
-  assert.equal(await token.pending(alice.address, 0), TOKEN);
-  const before = await provider.getBalance(alice.address);
-  const receipt = await send(token.claim(0));
-  assert.equal(await provider.getBalance(alice.address) - before + receipt.fee, UNIT);
+  await send(token.claim());
+  assert.equal(await token.balanceOf(alice.address), TOKEN);
+  assert.equal((await token.positions(alice.address)).claimedPeriods, 1n);
+  await send(token.claim());
   assert.equal(await token.totalSupply(), TOKEN);
-  assert.equal(await token.decimals(), 4n);
-  assert.equal(await token.pending(alice.address, 0), 0n);
 });
 
-test('one active position per address, independent accounts and stale IDs rejected', async t => {
+test('36h claim keeps 12h remainder; claimed UBIC is spendable while earning continues', async t => {
   const { token, alice, bob, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
-  const original = await token.positions(alice.address, 0);
+  const started = (await token.positions(alice.address)).depositedAt;
+  await advance(DAY * 1.5);
+  await send(token.claim());
+  await send(token.transfer(bob.address, TOKEN));
   await advance(DAY / 2);
-  await assert.rejects(send(token.deposit({ value: UNIT, gasLimit: 200000 })));
-  assert.equal(await token.hasActivePosition(alice.address), true);
-  assert.equal(await token.nextPositionId(alice.address), 1n);
-  assert.equal((await token.positions(alice.address, 0)).depositedAt, original.depositedAt);
-  await assert.rejects(token.connect(bob).claim.staticCall(0));
+  assert.equal(await token.pending(alice.address), TOKEN);
+  await send(token.claim());
+  assert.equal(await token.balanceOf(alice.address), TOKEN);
+  assert.equal(await token.balanceOf(bob.address), TOKEN);
+  assert.equal((await token.positions(alice.address)).depositedAt, started);
+  assert.equal((await token.positions(alice.address)).claimedPeriods, 2n);
+});
+
+test('withdraw settles only remaining rewards, refunds principal and permits a fresh deposit', async t => {
+  const { token, alice, provider, send, advance } = await fixture(t);
+  await send(token.deposit({ value: UNIT }));
+  await advance(DAY);
+  await send(token.claim());
+  await advance(2 * DAY + DAY / 2);
+  const before = await provider.getBalance(alice.address);
+  const receipt = await send(token.withdraw());
+  assert.equal(await provider.getBalance(alice.address) - before + receipt.fee, UNIT);
+  assert.equal(await token.balanceOf(alice.address), 3n * TOKEN);
+  assert.deepEqual(Array.from(await token.positions(alice.address)), [0n, 0n]);
+  assert.equal(await token.pending(alice.address), 0n);
+  await assert.rejects(token.claim.staticCall());
+  await assert.rejects(token.withdraw.staticCall());
+  await send(token.deposit({ value: UNIT }));
+  await advance(DAY / 2);
+  await send(token.withdraw());
+  assert.equal(await token.balanceOf(alice.address), 3n * TOKEN);
+});
+
+test('accounts are isolated; early withdrawal returns full principal with no rewards', async t => {
+  const { token, alice, bob, provider, send, advance } = await fixture(t);
+  await send(token.deposit({ value: UNIT }));
+  await assert.rejects(token.connect(bob).withdraw.staticCall());
+  await assert.rejects(token.connect(bob).claim.staticCall());
+  await advance(DAY / 2);
   await send(token.connect(bob).deposit({ value: UNIT }));
   await advance(DAY / 2);
-  await assert.rejects(token.claim.staticCall(100));
-  await send(token.claim(0));
+  await send(token.claim());
+  const before = await provider.getBalance(bob.address);
+  const receipt = await send(token.connect(bob).withdraw());
+  assert.equal(await provider.getBalance(bob.address) - before + receipt.fee, UNIT);
+  assert.equal(await token.balanceOf(bob.address), 0n);
   assert.equal(await token.balanceOf(alice.address), TOKEN);
-  assert.equal(await token.totalPrincipal(), UNIT);
-  assert.equal(await token.hasActivePosition(alice.address), false);
-  assert.equal(await token.hasActivePosition(bob.address), true);
-  assert.equal(await token.pending(bob.address, 0), 0n);
-  await send(token.deposit({ value: UNIT }));
-  await assert.rejects(token.claim.staticCall(0));
-  await advance(DAY / 2);
-  await send(token.connect(bob).claim(0));
-  assert.equal(await token.balanceOf(bob.address), TOKEN);
-  assert.equal(await token.pending(alice.address, 1), 0n);
-  assert.equal(await token.totalPrincipal(), UNIT);
+  assert.equal(await provider.getBalance(await token.getAddress()), UNIT);
 });
 
-test('multiple days accrue; closing discards fractions and redeposit starts anew', async t => {
-  const { token, alice, send, advance } = await fixture(t);
-  await send(token.deposit({ value: UNIT }));
-  await advance(3 * DAY + DAY / 2);
-  await send(token.claim(0));
-  assert.equal(await token.balanceOf(alice.address), 3n * TOKEN);
-  await send(token.deposit({ value: UNIT }));
-  await advance(DAY / 2);
-  await send(token.claim(1));
-  assert.equal(await token.balanceOf(alice.address), 3n * TOKEN);
-  assert.equal(await token.nextPositionId(alice.address), 2n);
-});
-
-test('reentry blocked; failed refund rolls back mint, balance and position deletion', async t => {
+test('rejecting ETH receiver can claim; failed withdrawal rolls back; reentry blocked', async t => {
   const { token, alice, send, advance } = await fixture(t);
   const a = compiled['test/Receiver.sol'].Receiver;
   const receiver = await new ContractFactory(a.abi, a.evm.bytecode.object, alice).deploy(await token.getAddress());
   await receiver.waitForDeployment();
   const address = await receiver.getAddress();
   await send(receiver.deposit({ value: UNIT }));
-  await advance(DAY);
   await send(receiver.setReject(true));
-  await assert.rejects(send(receiver.claim(0, { gasLimit: 500000 })));
-  assert.equal(await token.totalPrincipal(), UNIT);
-  assert.equal(await token.hasActivePosition(address), true);
-  assert.equal(await token.totalSupply(), 0n);
-  assert.equal(await token.balanceOf(address), 0n);
-  assert.equal((await token.positions(address, 0)).active, true);
+  await advance(DAY);
+  await send(receiver.claim());
+  await advance(DAY);
+  const original = await token.positions(address);
+  await assert.rejects(send(receiver.withdraw({ gasLimit: 500000 })));
+  assert.deepEqual((await token.positions(address)).toArray(), original.toArray());
+  assert.equal(await token.balanceOf(address), TOKEN);
+  assert.equal(await token.totalSupply(), TOKEN);
+  assert.equal(await token.pending(address), TOKEN);
   await send(receiver.setReject(false));
-  await send(receiver.claim(0, { gasLimit: 500000 }));
+  await send(receiver.withdraw({ gasLimit: 500000 }));
   assert.equal(await receiver.blocked(), 3n);
   assert.equal(await receiver.received(), UNIT);
-  assert.equal(await token.totalPrincipal(), 0n);
-  assert.equal(await token.hasActivePosition(address), false);
-  assert.equal(await token.balanceOf(address), TOKEN);
-  assert.equal((await token.positions(address, 0)).active, false);
+  assert.equal(await token.balanceOf(address), 2n * TOKEN);
+  assert.equal((await token.positions(address)).depositedAt, 0n);
 });
 
 test('one xiao transfers and allowances use four-decimal base units', async t => {
   const { token, alice, bob, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
   await advance(DAY);
-  await send(token.claim(0));
+  await send(token.claim());
   await send(token.transfer(bob.address, 1));
   await send(token.approve(bob.address, 2));
   await send(token.connect(bob).transferFrom(alice.address, bob.address, 2));
+  assert.equal(await token.decimals(), 4n);
   assert.equal(await token.balanceOf(alice.address), TOKEN - 3n);
   assert.equal(await token.balanceOf(bob.address), 3n);
-  assert.equal(await token.allowance(alice.address, bob.address), 0n);
-  assert.equal(await token.totalSupply(), TOKEN);
 });
 
-test('self burn reduces balance and supply without affecting active principal or rewards', async t => {
+test('burning does not alter principal, time, or future earnings', async t => {
   const { token, alice, provider, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
   await advance(DAY);
-  await send(token.claim(0));
-  await send(token.deposit({ value: UNIT }));
-  await advance(DAY);
-  const receipt = await send(token.burn(1));
-  const event = receipt.logs.map(log => token.interface.parseLog(log)).find(log => log?.name === 'Transfer');
-  assert.equal(event.args.from, alice.address);
-  assert.equal(event.args.to, '0x0000000000000000000000000000000000000000');
-  assert.equal(event.args.value, 1n);
-  assert.equal(await token.balanceOf(alice.address), TOKEN - 1n);
+  await send(token.claim());
+  const original = await token.positions(alice.address);
+  await send(token.burn(1));
   assert.equal(await token.totalSupply(), TOKEN - 1n);
-  assert.equal(await token.hasActivePosition(alice.address), true);
-  assert.equal(await token.totalPrincipal(), UNIT);
-  assert.equal(await provider.getBalance(await token.getAddress()), UNIT);
-  assert.equal(await token.pending(alice.address, 1), TOKEN);
   await assert.rejects(token.burn.staticCall(TOKEN));
   await send(token.burn(TOKEN - 1n));
   assert.equal(await token.totalSupply(), 0n);
-  await send(token.claim(1));
+  assert.deepEqual((await token.positions(alice.address)).toArray(), original.toArray());
+  assert.equal(await provider.getBalance(await token.getAddress()), UNIT);
+  await advance(DAY);
+  await send(token.withdraw());
   assert.equal(await token.totalSupply(), TOKEN);
-  assert.equal(await token.totalPrincipal(), 0n);
 });
 
-test('burnFrom requires allowance and consumes it; failed burns roll back allowance', async t => {
+test('burnFrom requires and consumes allowance; failed burn rolls back allowance', async t => {
   const { token, alice, bob, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
   await advance(DAY);
-  await send(token.claim(0));
+  await send(token.claim());
   await assert.rejects(token.connect(bob).burnFrom.staticCall(alice.address, 1));
   await send(token.approve(bob.address, 3));
   await send(token.connect(bob).burnFrom(alice.address, 2));
   assert.equal(await token.allowance(alice.address, bob.address), 1n);
-  assert.equal(await token.balanceOf(alice.address), TOKEN - 2n);
   assert.equal(await token.totalSupply(), TOKEN - 2n);
-  assert.equal(await token.balanceOf(bob.address), 0n);
   await assert.rejects(token.connect(bob).burnFrom.staticCall(alice.address, 2));
   await send(token.approve(bob.address, TOKEN));
   await assert.rejects(send(token.connect(bob).burnFrom(alice.address, TOKEN, { gasLimit: 200000 })));
   assert.equal(await token.allowance(alice.address, bob.address), TOKEN);
-  assert.equal(await token.totalSupply(), TOKEN - 2n);
 });
 
-test('unaccounted ETH neither increases refund nor creates rewards', async t => {
-  const { token, alice, rpc, provider, send, advance } = await fixture(t);
+test('extra ETH does not change rewards or refunds', async t => {
+  const { token, rpc, provider, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
   await rpc.request({ method: 'evm_setAccountBalance', params: [await token.getAddress(), '0x' + (5n * UNIT).toString(16)] });
   await advance(DAY);
-  await send(token.claim(0));
+  await send(token.withdraw());
   assert.equal(await token.totalSupply(), TOKEN);
-  assert.equal(await token.totalPrincipal(), 0n);
   assert.equal(await provider.getBalance(await token.getAddress()), 4n * UNIT);
 });

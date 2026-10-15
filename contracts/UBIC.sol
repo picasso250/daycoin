@@ -4,9 +4,10 @@ pragma solidity 0.8.30;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-/// @notice One deposit locks exactly 0.1 ETH. One claim closes one position,
-/// refunds its ETH and mints 1 UBIC per completed 24-hour period.
+/// @notice One address locks exactly 0.1 ETH and earns 1 UBIC per full day.
+/// Claim keeps the position; withdraw settles rewards and refunds principal.
 /// @dev No owner, upgrade, batch endpoint, arbitrary mint or rescue function.
 contract UBIC is ERC20Burnable, ReentrancyGuard {
     uint256 public constant DEPOSIT = 0.1 ether;
@@ -14,22 +15,21 @@ contract UBIC is ERC20Burnable, ReentrancyGuard {
     uint256 public constant REWARD = 10_000; // 1 UBIC = 10,000 xiao (肖).
 
     struct Position {
-        uint256 depositedAt;
-        bool active;
+        uint64 depositedAt;
+        uint64 claimedPeriods;
     }
 
-    mapping(address => uint256) public nextPositionId;
-    mapping(address => bool) public hasActivePosition;
-    mapping(address => mapping(uint256 => Position)) public positions;
-    uint256 public totalPrincipal;
+    mapping(address => Position) public positions;
 
     error InvalidDeposit();
     error ActivePositionExists();
     error InactivePosition();
     error EtherTransferFailed();
+    error InvalidTimestamp();
 
-    event Deposited(address indexed account, uint256 indexed id);
-    event Claimed(address indexed account, uint256 indexed id, uint256 reward);
+    event Deposited(address indexed account);
+    event Claimed(address indexed account, uint256 reward);
+    event Withdrawn(address indexed account);
 
     constructor() ERC20("UBIC", "UBIC") {}
 
@@ -38,38 +38,50 @@ contract UBIC is ERC20Burnable, ReentrancyGuard {
     }
 
     /// @notice At most one active position per address. No top-ups.
-    function deposit() external payable nonReentrant returns (uint256 id) {
+    function deposit() external payable nonReentrant {
         if (msg.value != DEPOSIT) revert InvalidDeposit();
-        if (hasActivePosition[msg.sender]) revert ActivePositionExists();
-        id = nextPositionId[msg.sender]++;
-        hasActivePosition[msg.sender] = true;
-        positions[msg.sender][id] = Position(block.timestamp, true);
-        totalPrincipal += DEPOSIT;
-        emit Deposited(msg.sender, id);
+        if (positions[msg.sender].depositedAt != 0) revert ActivePositionExists();
+        if (block.timestamp == 0) revert InvalidTimestamp();
+        positions[msg.sender] = Position(SafeCast.toUint64(block.timestamp), 0);
+        emit Deposited(msg.sender);
     }
 
-    /// @notice Returns exactly 0.1 ETH before gas costs, plus N UBIC for N full
-    /// days. Closes the position and discards its incomplete day. To earn again,
-    /// deposit again. Smart-contract callers must be able to receive ETH.
-    function claim(uint256 id) external nonReentrant returns (uint256 reward) {
-        Position memory p = positions[msg.sender][id];
-        if (!p.active) revert InactivePosition();
-        reward = ((block.timestamp - p.depositedAt) / PERIOD) * REWARD;
+    /// @notice Mints mature rewards, preserving principal and unfinished time.
+    /// An active position with no full day yet returns zero without resetting time.
+    function claim() external nonReentrant returns (uint256 reward) {
+        return _settle(msg.sender);
+    }
 
-        delete positions[msg.sender][id];
-        hasActivePosition[msg.sender] = false;
-        totalPrincipal -= DEPOSIT;
-        if (reward != 0) _mint(msg.sender, reward);
-        emit Claimed(msg.sender, id, reward);
+    /// @notice Settles unclaimed full days, closes the position and refunds
+    /// exactly 0.1 ETH before gas costs. Discards only the unfinished day.
+    /// Smart-contract callers must be able to receive ETH.
+    function withdraw() external nonReentrant returns (uint256 reward) {
+        reward = _settle(msg.sender);
+        delete positions[msg.sender];
+        emit Withdrawn(msg.sender);
 
         (bool success,) = payable(msg.sender).call{value: DEPOSIT}("");
         if (!success) revert EtherTransferFailed();
     }
 
     /// @notice Reward in xiao (肖); zero for inactive positions.
-    function pending(address account, uint256 id) external view returns (uint256) {
-        Position memory p = positions[account][id];
-        if (!p.active) return 0;
-        return ((block.timestamp - p.depositedAt) / PERIOD) * REWARD;
+    function pending(address account) external view returns (uint256) {
+        Position memory p = positions[account];
+        if (p.depositedAt == 0) return 0;
+        return (((block.timestamp - p.depositedAt) / PERIOD) - p.claimedPeriods) * REWARD;
+    }
+
+    function _settle(address account) private returns (uint256 reward) {
+        Position storage p = positions[account];
+        if (p.depositedAt == 0) revert InactivePosition();
+        uint256 elapsedPeriods = (block.timestamp - p.depositedAt) / PERIOD;
+        uint256 unclaimedPeriods = elapsedPeriods - p.claimedPeriods;
+        if (unclaimedPeriods != 0) {
+            // Preserve the original timestamp and count only completed periods.
+            p.claimedPeriods = SafeCast.toUint64(elapsedPeriods);
+            reward = unclaimedPeriods * REWARD;
+            _mint(account, reward);
+            emit Claimed(account, reward);
+        }
     }
 }
