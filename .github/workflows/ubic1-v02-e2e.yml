@@ -4,7 +4,20 @@ on:
   push:
     paths:
       - 'contracts/UBIC1V02.sol'
+      - 'scripts/compile.mjs'
       - 'scripts/compile-v02.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'test/ubic-v02.test.mjs'
+      - 'sites/ubic1-v02/**'
+      - '.github/workflows/ubic1-v02-e2e.yml'
+  pull_request:
+    paths:
+      - 'contracts/UBIC1V02.sol'
+      - 'scripts/compile.mjs'
+      - 'scripts/compile-v02.mjs'
+      - 'package.json'
+      - 'package-lock.json'
       - 'test/ubic-v02.test.mjs'
       - 'sites/ubic1-v02/**'
       - '.github/workflows/ubic1-v02-e2e.yml'
@@ -20,10 +33,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout fixed repository commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 reviewed commit
 
       - name: Use Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4 reviewed commit
         with:
           node-version: '22'
 
@@ -48,7 +61,7 @@ jobs:
       - name: Run v0.2 UI tests and browser E2E
         run: npm --prefix sites/ubic1-v02 test
 
-      - name: Confirm production frontends unchanged
+      - name: Confirm v0.2 defaults are disconnected from all networks
         run: |
           test ! -f sites/ubic1-v02/dist/deployment.json
-          grep -q 'address: null' sites/ubic1-v02/dist/config.mjs
+          node --input-type=module -e "import {CONFIG} from './sites/ubic1-v02/dist/config.mjs'; for (const key of ['chainId','address','runtimeHash','rpcUrl','explorerUrl']) { if (CONFIG[key] !== null) throw Error(key+' must stay null in committed UI'); } console.log('v0.2 remains undeployed and disabled')"
