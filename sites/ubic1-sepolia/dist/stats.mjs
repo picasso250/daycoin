@@ -1,5 +1,6 @@
 import { JsonRpcProvider, FetchRequest, Interface, Contract, formatEther, formatUnits, keccak256 } from './ethers.min.js';
 import {createLedger, applyLedgerEvent, monetarySnapshot, makeSamples, formatAnnualBps, DAY_SECONDS} from './stats-model.mjs';
+import {scanLogs} from './stats-scan.mjs';
 
 const ADDRESS='0xef04ABbc1EEf957715895c234f5dEef7d2452AE1';
 const HASH='0x1eaa64a36b75ec045d2c1fc6375784aae427340bb6299dd5db34a87a39deb407';
@@ -69,14 +70,8 @@ async function load(){
   if(!finalBlock)throw Error('快照区块不可用');
   const [genesis,supply]=await Promise.all([contract.genesisTime({blockTag:targetBlock}),contract.totalSupply({blockTag:targetBlock})]);
   const names=['Deposited','ToppedUp','Withdrawn','Claimed','Transfer'], topics=names.map(n=>iface.getEvent(n).topicHash);
-  const logs=[];let from=START,chunk=2000,attempts=0;
-  while(from<=targetBlock){
-   const end=Math.min(from+chunk-1,targetBlock);
-   try{logs.push(...await rpc.getLogs({address:ADDRESS,fromBlock:from,toBlock:end,topics:[topics]}));from=end+1;attempts=0;}
-   catch(e){if(chunk>20){chunk=Math.max(20,Math.floor(chunk/5));continue;}throw e;}
-   if(++attempts>1000)throw Error('索引超时：区块跨度过大，需要持久化索引服务');
-   note('正在索引历史事件 '+Math.round(100*(from-START)/(targetBlock-START+1))+'%');
-  }
+  const logs=await scanLogs(rpc,{address:ADDRESS,topics:[topics]},START,targetBlock,
+   percent=>note('正在索引历史事件 '+percent+'%'));
   logs.sort((a,b)=>a.blockNumber-b.blockNumber||a.index-b.index);
   const ledger=createLedger(),events=[],timeCache=new Map();
   for(let i=0;i<logs.length;i++){
@@ -99,6 +94,8 @@ async function load(){
   saved=null; note('链上数据暂不可核验：'+(e.message||String(e)),true);
   for(const id of ['stat-eligible','stat-production','stat-annual','stat-active','stat-supply','stat-staked','stat-year','stat-minted-burned'])show(id,'—');
   $('chart-eligible').replaceChildren();$('chart-annual').replaceChildren();
+  for(const id of ['stats-index-note','chart-eligible-note','chart-annual-note'])show(id,'本次快照核验未完成，统计暂不可用。');
+  show('stat-year-desc','数据暂不可用');
  }finally{busy=false;$('refresh-stats').disabled=false;}
 }
 $('refresh-stats').addEventListener('click',load);
