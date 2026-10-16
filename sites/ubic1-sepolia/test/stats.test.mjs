@@ -51,3 +51,7 @@ test('incomplete event stream causes hard failure',()=>{
   assert.throws(()=>applyLedgerEvent(createLedger(),{name:'Burned',account:'a',amount:1n}));
   assert.throws(()=>applyLedgerEvent(createLedger(),{name:'ToppedUp',account:'a',amount:1n}));
 });
+
+test('supply contraction has a signed growth rate',()=>{
+  assert.equal(formatAnnualBps(-123n),'-1.23%');
+});
