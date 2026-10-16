@@ -1,0 +1,74 @@
+# UBIC1-v0.2 · 极简连续发行实验
+
+**状态：仅本地实现，尚未部署任何 v0.2 主网合约。** 不可把 v0.1 主网地址当成 v0.2 使用。
+
+已部署 v0.1 合约：0x759723E3869181616D6567458b59bCbA365FEcEe。它无法删除、升级或修改，即使目前尚未公开推广。v0.2 是一个将来需要独立部署的新合约。
+
+## 三个入口
+
+| 函数 | 行为 |
+| --- | --- |
+| deposit() payable | 任意正数额 ETH 入金或加仓；本金增加；奖励时钟重置，旧的全部未领取奖励丢失；不铸币 |
+| claim() | 把尚未领取的合格秒数线性兑换成 UBIC1；推进奖励时钟，不动本金 |
+| withdraw() | 随时清仓，按记录本金退款；放弃未领取奖励；不执行奖励计算 |
+
+没有 topUp()：追加存款就是再次 deposit()。不支持部分提款。ERC20 name 和 symbol 为 UBIC1，decimals 为 18。没有 owner、升级、暂停、管理员增发或救援。
+
+## 状态结构
+
+~~~solidity
+struct Position {
+    uint64 cursor;       // 尚未结算的奖励时间游标
+    uint256 principal;   // 可退的全部 ETH 本金
+}
+~~~
+
+本金为 0 表示无仓位。存款只增加 principal、重置 cursor，无内部奖励账本，无历史迭代。
+
+## 持续达标规则
+
+自部署起每隔 1000 天，质押门槛上涨 0.1 ETH，初始为 0.1 ETH。只有本金在某个时间点达到该时刻门槛，才能累计奖励；多存本金不提高发行速率。
+
+~~~text
+epoch = 1000 * 86400 seconds
+covered = floor(principal / 0.1 ETH)
+currentEpoch = floor((now - genesisTime) / epoch)
+eligibleEnd =
+    now                             if covered > currentEpoch
+    genesisTime + covered * epoch    otherwise
+eligibleSeconds = max(0, eligibleEnd - cursor)
+claimableSmallestUnits = floor(eligibleSeconds * 10^18 / 86400)
+~~~
+
+所以某个地址在第 0 天质押 0.1 ETH，到第 1000 天自动停止获得新奖励；在第 1200 天仍可以 claim 前 1000 天的合法奖励。若先 deposit 追加钱、未先 claim，那么之前的奖励按照已定稿规则作废，并从新 deposit 的时间重新开始。
+
+Claim 允许随时进行，不必满一天。例如达到条件 12 小时可领取 0.5 UBIC1。每次 Claim 采用向下取整；每次独立铸币的误差严格小于 1 个代币最小单位，即 10^-18 UBIC1。为保持状态极简，本版不结转该微小余数。
+
+## 示例
+
+- 存入 1 wei，次日 Withdraw：原额退回，奖励为 0（Gas 另付）。
+- 存入 0.001 ETH，过一年追加 0.099 ETH：新 Deposit 时才第一次开始累计奖励，先前一年为 0。
+- 达标 3.5 天后直接再存 1 wei：丢弃未领取的 3.5 UBIC1；重新计时。
+- 达标 3.5 天后先 Claim 再存 1 wei：领取的 3.5 UBIC1 保留；重新计时。
+- 0.1 ETH 从创世时达标，第 1000 天失格，第 1200 天可以补领此前 1000 天，失格的 200 天不产生奖励。
+- 0.3 ETH 可连续合格到第 3000 天；门槛再涨便失格。
+
+## 安全约束
+
+- 不变量：合约 ETH 余额 >= 所有活跃仓位的 principal 总和。Withdraw 不依赖门槛、Claim、ERC20 余额或等待期。
+- 仍存在已知合约钱包问题：无法接收 ETH 的永久拒收智能钱包可能锁住自己的本金。若 EOA 使用 EIP-7702 委托，也要单独审查委托接收行为。
+- 前端必须在任何 Deposit 前明显提示“未领取奖励和计时将永久归零”，最好显示 pending 数额；Withdraw 也必须提示奖励作废。此类 UI 是知情同意，不是链上安全边界。
+- v0.1 前端使用不同 ABI、仓位字段和 decimals，不能直接改地址复用。
+- 当前只能本地编译、测试，禁止在未另行明确授权的情况下部署主网或转移资产。
+
+## 本地构建
+
+~~~powershell
+npm run build:v02
+npm run test:v02
+npm test
+~~~
+
+新合约：contracts/UBIC1V02.sol；测试：test/ubic-v02.test.mjs；构建产物：artifacts/UBIC1V02.json（gitignored）。旧版源码及部署记录不改动。
+
+部署之前仍需：独立安全审计、完整 v0.2 前端及端到端测试、测试网试运行、部署版本字节码核对、主网显式确认。真实存款风险无法完全消除。

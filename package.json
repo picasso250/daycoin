@@ -6,6 +6,8 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "build": "node scripts/compile.mjs",
+    "build:v02": "node scripts/compile-v02.mjs",
+    "test:v02": "node --test test/ubic-v02.test.mjs",
     "deploy:sepolia": "node --env-file-if-exists=.env scripts/deploy-sepolia.mjs",
     "deploy:mainnet": "node --env-file=.env.mainnet scripts/deploy-mainnet.mjs",
     "test:sepolia": "node --env-file-if-exists=.env scripts/test-sepolia.mjs"
