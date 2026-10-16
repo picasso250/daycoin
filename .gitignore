@@ -5,6 +5,5 @@ artifacts/
 !.env.example
 deployments/
 .wrangler/
-dist/
 .openai/
 *.tar.gz
