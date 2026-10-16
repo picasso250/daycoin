@@ -159,7 +159,8 @@ test('browser E2E: real click -> local ETH deposit/claim/reset/withdraw, no main
   assert.equal(await contract.pending(account),parseEther('0.5'));
   // Actual signed local deposit resets all 0.5 unclaimed UBIC.
   await submitDeposit(page,'0.000000000000000001');
-  await waitValue(page,'#pending','0');
+  await page.waitForFunction(() => document.querySelector('#pending')?.textContent?.trim() === '0', null, {timeout: 16000});
+  await page.waitForFunction(() => document.querySelector('#tx-title')?.textContent === 'Confirmed', null, {timeout: 16000});
   assert.equal((await contract.positions(account)).principal,UNIT+1n);
   assert.equal(await contract.pending(account),0n);
   await chain.provider.send('evm_increaseTime',[DAY/2]);
