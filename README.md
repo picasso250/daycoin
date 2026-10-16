@@ -18,7 +18,7 @@ UBIC1 是一个不设 Owner、不可升级的 Ethereum 货币发行实验。**�
 npm ci
 npm run build
 npm test
-npm --prefix sites/ubic1-v02 test
+npm --prefix sites/ubic1-sepolia test
 ```
 
 ## 部署与网站
@@ -30,7 +30,7 @@ npm run deploy -- .env.sepolia artifacts/UBIC1V02.json      # 仅预演
 npm run verify -- .env.sepolia artifacts/UBIC1V02.json     # 只读字节码核对
 ```
 
-当前前端位于 `sites/ubic1-v02/dist`，`wrangler.jsonc` 直接将其发布为现有的 `ubic1-sepolia` Cloudflare Worker。网站内容不包含私钥；只通过用户自己的扩展钱包签名。
+当前前端位于 `sites/ubic1-sepolia/dist`，`wrangler.jsonc` 直接将其发布为现有的 `ubic1-sepolia` Cloudflare Worker。网站内容不包含私钥；只通过用户自己的 EIP-1193 钱包签名。本地预览：`npm --prefix sites/ubic1-sepolia run dev`，打开 `http://127.0.0.1:5173`。实现边界与测试见 [前端说明](sites/ubic1-sepolia/README.md)。
 
 ```powershell
 npx wrangler deploy --config wrangler.jsonc

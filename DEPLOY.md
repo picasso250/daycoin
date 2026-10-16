@@ -43,7 +43,7 @@ Solidity 的 immutable 会在构造时写入运行时代码，因此通用核验
 ```powershell
 npm run test:deploy
 npm run test:v02
-npm --prefix sites/ubic1-v02 test
+npm --prefix sites/ubic1-sepolia test
 ```
 
 本地/CI 在隔离 Ganache 模拟链测试通用部署器。旧的按网络分叉部署脚本已删除；所有新合约使用统一的 `npm run deploy -- <env> <artifact>`。v0.2 Sepolia 前端已经绑定独立核验的测试网合约，不会发送主网交易。

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="UBIC1 v0.2 · Ethereum Sepolia 测试网连续发行实验。存入、领取、取回全部本金。">
+  <title>UBIC1 · Sepolia 实验台</title>
+  <link rel="stylesheet" href="styles.css"><script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <div class="testnet">仅限 Ethereum Sepolia 测试网 <span>CHAIN ID 11155111 · 测试资产无真实价值</span></div>
+  <div class="shell">
+    <header><a class="brand" href="./" aria-label="UBIC1 首页"><span class="mark">U</span> UBIC1 <small>v0.2</small></a><span class="network"><i></i> Sepolia</span></header>
+    <main>
+      <section class="intro"><div><p class="eyebrow">CONTINUOUS ISSUANCE EXPERIMENT</p><h1>让时间，成为奖励。</h1><p class="lede">存入测试 ETH，达标期间每日累计 1 UBIC1。<br>随时领取奖励，或取回全部记录本金。</p></div><div class="rate"><strong>1<span> UBIC1</span></strong><p>每 24 小时达标时间 · 按秒累计</p></div></section>
+      <section class="workspace" aria-label="账户与操作">
+        <div class="accountbar"><div><p class="eyebrow">YOUR POSITION / 我的仓位</p><p id="account">连接钱包以查看仓位</p></div><div class="wallet-actions"><label class="sr-only" for="wallets">选择钱包</label><select id="wallets" aria-label="选择钱包"><option value="">浏览器钱包</option></select><button id="connect" class="dark">连接钱包 <span>↗</span></button><button id="refresh" class="quiet" disabled>刷新</button></div></div>
+        <div class="metrics"><div><p>可退本金 <span>ETH</span></p><strong id="principal">—</strong><small>Withdraw 一次取回全部</small></div><div><p>待领奖励 <span>UBIC1</span></p><strong id="pending">—</strong><small id="claimable">连接后查看领取资格</small></div><div><p>代币余额 <span>UBIC1</span></p><strong id="balance">—</strong><small>已领取的 UBIC1</small></div></div>
+        <div class="qualification"><span id="eligibility">等待连接钱包</span><span>当前累计门槛 <b id="required">—</b> ETH</span></div>
+        <div class="operations">
+          <section class="operation deposit"><div class="step">01 / DEPOSIT</div><h2>存入 ETH</h2><p>首次存入或追加本金。多存不会提高奖励速率。</p><label for="deposit-amount">存入金额</label><div class="amount-input"><input id="deposit-amount" type="text" inputmode="decimal" placeholder="0.1" autocomplete="off" spellcheck="false"><span>ETH</span></div><p class="warning">每次 Deposit 都会让未领取奖励和计时永久归零。想保留奖励，请先 Claim。</p><button id="deposit" class="accent" disabled>存入 · Deposit <span>↗</span></button></section>
+          <section class="operation"><div class="step">02 / CLAIM</div><h2>领取奖励</h2><p>把已累计的奖励领取为 UBIC1，本金保持不变。</p><div class="operation-note">无需等待满一天。<br>当前不再达标，也可领取过去累计的奖励。</div><button id="claim" class="outline" disabled>领取 · Claim <span>↗</span></button></section>
+          <section class="operation"><div class="step">03 / WITHDRAW</div><h2>取回本金</h2><p>一次取回全部记录本金。没有等待期，不支持部分提款。</p><div class="operation-note">未领取奖励将作废。<br>已领取的 UBIC1 保留，Gas 由钱包另行支付。</div><button id="withdraw" class="outline" disabled>全部取回 · Withdraw <span>↗</span></button></section>
+        </div>
+      </section>
+      <div class="statusline"><p id="status" role="status" aria-live="polite">准备就绪。连接钱包后读取 Sepolia 链上数据。</p><a id="transaction" target="_blank" rel="noopener noreferrer" hidden>查看交易 ↗</a><small id="updated">链上快照 · 未读取</small></div>
+      <section class="details"><div><p class="eyebrow">SIMPLE BY DESIGN</p><h2>规则透明，边界明确。</h2></div><div><p>初始门槛为 0.1 ETH，自合约部署起每 1000 天增加 0.1 ETH。低于当前门槛时停止累计；任何正数额仍可存入和取回。</p><p>本页面仅连接固定 Sepolia 合约，并在交易前核对 Runtime Hash。请在钱包中核对网络、账户和金额。智能合约钱包须能接收 ETH，才能取回本金。</p><details><summary>查看固定合约与验证信息</summary><dl><dt>合约地址</dt><dd><a id="contract" target="_blank" rel="noopener noreferrer"></a></dd><dt>Runtime Hash · Keccak-256</dt><dd id="runtime"></dd><dt>数据来源</dt><dd>Sepolia PublicNode · 区块快照，不使用本机时钟估算奖励</dd></dl></details></div></section>
+    </main><footer><span>UBIC1 / 连续发行实验</span><span>SEPOLIA ONLY · v0.2</span></footer>
+  </div>
+  <dialog id="confirmation"><form method="dialog"><p class="eyebrow">确认操作 / SEPOLIA</p><h2 id="confirm-title"></h2><p id="confirm-account" class="mono"></p><p id="confirm-body"></p><p id="confirm-warning" class="warning"></p><p class="muted">最终金额与 Gas 以钱包确认页为准。</p><div class="dialog-actions"><button value="cancel" class="outline">取消</button><button value="confirm" class="dark">我已了解，继续到钱包</button></div></form></dialog>
+</body></html>

@@ -5,6 +5,6 @@
   "workers_dev": true,
   "preview_urls": false,
   "assets": {
-    "directory": "./sites/ubic1-v02/dist"
+    "directory": "./sites/ubic1-sepolia/dist"
   }
 }
