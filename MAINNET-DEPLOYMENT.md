@@ -11,7 +11,7 @@
 3. 配置可信任的 Ethereum Mainnet HTTPS RPC，只接受 Chain ID `1`。
 4. 在本地复制 `.env.mainnet.example` 至 `.env.mainnet`，只填入 `MAINNET_RPC_URL` 和 `MAINNET_PRIVATE_KEY`。本文件被 Git 忽略；不会读旧 `.env`。
 5. 设置 `MAINNET_MAX_DEPLOY_FEE_ETH` 作为本次部署 **Gas 上限预算**。主网实际 Gas 价格动态变化，Sepolia 价格不适用。
-6. 已存在 `deployments/mainnet.json` 时脚本禁止新部署；交易超时后先查 Etherscan，勿清理记录后盲目重发。
+6. 已存在 `deployments/mainnet.json` 时脚本禁止新部署；这是一次性、排他性的部署预留记录。交易超时后先查 Etherscan，勿清理记录后盲目重发。
 
 ## 仅执行预检（不会发送交易）
 
@@ -30,6 +30,17 @@ npm run deploy:mainnet
 ```powershell
 npm run deploy:mainnet -- --broadcast --confirm-deployer=0x你的主网部署钱包地址
 ```
+
+### 广播中断时的人工恢复（禁止盲目重试）
+
+部署脚本先使用排他文件创建 `deployments/mainnet.json`（状态 `reserved`），然后计算 nonce、预期合约地址、签名交易和哈希，把状态改为 `signed` 并落盘。**只有签名记录保存成功后才向 RPC 广播**，正常收到响应后改为 `pending`，最终核验通过改为 `confirmed`。脚本不会自动第二次部署，也不会自动重播。
+
+- `reserved`：程序在发送前中断，没有可靠交易哈希。停机排查，核查该钱包链上 nonce 和其他并发交易，**不要仅凭 Etherscan 查不到交易就重新部署**。
+- `signed`：交易哈希、nonce、预期合约地址已经保存；RPC 可能已接受交易，但响应丢失。用记录的哈希查 Etherscan、RPC 的交易/回执和钱包 nonce。暂时查不到不能证明未发送；不要使用新的 nonce 再次运行脚本。
+- `pending`：已得到广播响应，等待链上交易回执；超时不会解锁再次部署，不能通过删除记录绕过。
+- `confirmed`：本地校验已通过；可独立在浏览器核对地址、区块和实际代码。
+
+`mainnet.json` 不包含私钥或原始签名交易；因此脚本**没有自动恢复或重播功能**。若需要处理悬而未决的交易，应先人工确认链上最终结果，必要时使用专门的恢复流程；不可直接再次执行广播命令。文件被 Git 忽略，请自行做好安全备份。
 
 部署后只记录 **单笔交易**、完整运行时代码哈希和地址到本地 `deployments/mainnet.json`。初始供应必须为零；脚本会按精确编译设置验证链上字节码（只忽略构造函数嵌入的时间戳字段）。需另外在 Etherscan 提交合约源码验证。**不要自动发布或将 Sepolia 前端改指主网**；先做独立链上核验与正式发布决策。
 

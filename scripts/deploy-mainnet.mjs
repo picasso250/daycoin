@@ -1,15 +1,11 @@
 import fs from 'node:fs';
-import { ContractFactory, JsonRpcProvider, Wallet, formatEther, formatUnits, getAddress, keccak256 } from 'ethers';
+import { Contract, ContractFactory, JsonRpcProvider, Wallet, formatEther, formatUnits, getAddress, getCreateAddress, keccak256 } from 'ethers';
 import { artifact, matchesRuntime } from './sepolia-common.mjs';
 import { deploymentFeeCap, parseDeployMode, requireFreshDeployer, requireMainnet } from './mainnet-guards.mjs';
+import { reserveDeployment, updateDeployment, broadcastRecordedTransaction } from './mainnet-journal.mjs';
 
 const DEPLOYMENT_FILE = 'deployments/mainnet.json';
 const readRecord = file => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
-function saveRecord(data) {
-  fs.mkdirSync('deployments', { recursive: true });
-  fs.writeFileSync(DEPLOYMENT_FILE + '.tmp', JSON.stringify(data, null, 2) + '\n');
-  fs.renameSync(DEPLOYMENT_FILE + '.tmp', DEPLOYMENT_FILE);
-}
 function safeMessage(error) {
   let message = String(error.shortMessage || error.message || 'Unknown deployment error');
   for (const secret of [process.env.MAINNET_PRIVATE_KEY, process.env.MAINNET_RPC_URL])
@@ -61,20 +57,34 @@ try {
     console.log('PREFLIGHT ONLY. No transaction was signed or sent.');
     console.log('For explicit deployment, rerun with --broadcast --confirm-deployer=' + signer.address);
   } else {
-    const instance = await factory.deploy({
+    // Exclusive single-use reservation BEFORE nonce selection and BEFORE any network broadcast.
+    // A crash at any stage leaves a record, so a second run cannot blindly redeploy.
+    const reserved = {
+      chainId: 1, deployer: signer.address,
+      createdAt: new Date().toISOString(), compiler: '0.8.37',
+      evmVersion: 'shanghai', optimizerRuns: 200
+    };
+    reserveDeployment(DEPLOYMENT_FILE, reserved);
+    const nonce = await provider.getTransactionCount(signer.address, 'pending');
+    const address = getCreateAddress({ from: signer.address, nonce });
+    const signedTransaction = await signer.signTransaction({
+      chainId: 1, type: 2, nonce, to: null, data: request.data, value: 0n,
       gasLimit, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas
     });
-    const tx = instance.deploymentTransaction();
-    const address = await instance.getAddress();
-    const record = {
-      chainId: 1, address, deployer: signer.address, transactionHash: tx.hash,
-      status: 'pending', compiler: '0.8.37', evmVersion: 'shanghai', optimizerRuns: 200
-    };
-    saveRecord(record);
-    console.log('Broadcast: https://etherscan.io/tx/' + tx.hash);
-    const receipt = await tx.wait(1, 180000);
-    if (!receipt || receipt.status !== 1) throw new Error('Deployment did not succeed. Inspect existing transaction before retrying.');
+    const prepared = { ...reserved, nonce, address };
+    const signedHash = keccak256(signedTransaction);
+    console.log('Precomputed mainnet contract address: ' + address);
+    console.log('Signed transaction hash: https://etherscan.io/tx/' + signedHash);
+    const {transactionHash, signedRecord} = await broadcastRecordedTransaction({
+      file: DEPLOYMENT_FILE, prepared, signedTransaction,
+      broadcast: bytes => provider.broadcastTransaction(bytes)
+    });
+    console.log('Broadcast returned: https://etherscan.io/tx/' + transactionHash);
+    const receipt = await provider.waitForTransaction(transactionHash, 1, 180000);
+    if (!receipt || receipt.status !== 1 || receipt.contractAddress?.toLowerCase() !== address.toLowerCase())
+      throw new Error('Deployment missing, failed, or at wrong address. Inspect saved hash before any further action.');
     const block = await provider.getBlock(receipt.blockNumber);
+    const instance = new Contract(address, built.abi, provider);
     const [genesis, name, symbol, decimals, supply, code] = await Promise.all([
       instance.genesisTime(), instance.name(), instance.symbol(), instance.decimals(),
       instance.totalSupply(), provider.getCode(address)
@@ -82,8 +92,8 @@ try {
     if (genesis !== BigInt(block.timestamp) || name !== 'UBIC1' || symbol !== 'UBIC1' ||
         decimals !== 4n || supply !== 0n || !matchesRuntime(code, built))
       throw new Error('Deployed code or token invariants do not match the build. Do not publish or accept deposits.');
-    saveRecord({
-      ...record, status: 'confirmed', blockNumber: receipt.blockNumber,
+    updateDeployment(DEPLOYMENT_FILE, {
+      ...signedRecord, status: 'confirmed', blockNumber: receipt.blockNumber,
       genesisTime: genesis.toString(), runtimeHash: keccak256(code)
     });
     console.log('VERIFIED: https://etherscan.io/address/' + address);
