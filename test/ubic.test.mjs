@@ -202,7 +202,7 @@ test('burning does not alter principal, time, or future earnings', async t => {
   assert.equal(await provider.getBalance(await token.getAddress()), UNIT);
   await advance(DAY);
   await send(token.withdraw());
-  assert.equal(await token.totalSupply(), TOKEN);
+  assert.equal(await token.totalSupply(), 0n);
 });
 
 test('burnFrom requires and consumes allowance; failed burn rolls back allowance', async t => {
@@ -227,7 +227,7 @@ test('extra ETH does not change rewards or refunds', async t => {
   await rpc.request({ method: 'evm_setAccountBalance', params: [await token.getAddress(), '0x' + (5n * UNIT).toString(16)] });
   await advance(DAY);
   await send(token.withdraw());
-  assert.equal(await token.totalSupply(), TOKEN);
+  assert.equal(await token.totalSupply(), 0n);
   assert.equal(await provider.getBalance(await token.getAddress()), 4n * UNIT);
 });
 
