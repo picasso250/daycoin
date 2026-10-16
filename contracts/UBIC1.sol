@@ -83,15 +83,15 @@ contract UBIC1 is ERC20Burnable, ReentrancyGuard {
         return _settle(msg.sender);
     }
 
-    /// @notice Always refunds all recorded principal. Settles rewards only if
-    /// currently qualified; otherwise all unminted entitlement is forfeited.
-    /// Closes the position and discards any incomplete day.
+    /// @notice Closes the position and refunds all recorded principal, regardless
+    /// of claim eligibility or elapsed time. Never mints rewards.
+    /// All unclaimed entitlement is forfeited, including mature full days.
+    /// Call claim() first if you want to keep mature rewards.
     /// Smart-contract callers must be able to receive ETH.
-    function withdraw() external nonReentrant returns (uint256 reward) {
+    function withdraw() external nonReentrant {
         Position storage p = positions[msg.sender];
         if (p.depositedAt == 0) revert InactivePosition();
         uint256 principal = p.principal;
-        if (principal >= requiredDeposit()) reward = _settle(msg.sender);
         delete positions[msg.sender];
         emit Withdrawn(msg.sender, principal);
 
