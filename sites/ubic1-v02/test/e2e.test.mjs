@@ -103,7 +103,9 @@ async function lab(t) {
     };
   },{account});
   const url=`http://127.0.0.1:${sitePort}/`;
-  t.after(async()=>{await browser.close();await close(site);rpc.destroy();await close(chain);});
+  // Ganache server.close() returns a Promise; unlike Node HTTP server.close,
+  // it does not accept a callback. Using the HTTP helper hung test teardown.
+  t.after(async()=>{await browser.close();await close(site);rpc.destroy();await chain.close();});
   return {rpc,chain,page,contract,account,url,setMismatch:v=>{mismatch=v;}};
 }
 async function waitValue(page, selector, expression) {
