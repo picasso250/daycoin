@@ -13,6 +13,32 @@ export function positionState(position, required, pending) {
     nextAt: active ? position.depositedAt + (position.claimedPeriods + 1n) * DAY : null,
     status: !active ? 'empty' : gap > 0n ? 'underfunded' : pending > 0n ? 'ready' : 'accruing' };
 }
+// A wallet balance is not a pending entitlement. Only pending can be forfeited.
+export function withdrawGuidance(position, required, pending) {
+  const s = positionState(position, required, pending);
+  return {
+    recommendClaim: s.claimable,
+    forfeitsMature: s.active && pending > 0n,
+    gap: s.gap
+  };
+}
+
+// Capture the precise BigInt values shown when a withdrawal dialog opens.
+// A background RPC refresh must not silently redefine the user's consent.
+export function withdrawalConsentSnapshot(personal, state) {
+  return Object.freeze({
+    pending: personal.pending,
+    principal: personal.position.principal,
+    claimable: state.claimable
+  });
+}
+
+// Reconsider the user's consent if the actual forfeiture or claim option changed.
+export function withdrawalNeedsNewConsent(before, after) {
+  return before.pending !== after.pending ||
+    before.principal !== after.principal ||
+    before.claimable !== after.claimable;
+}
 export function countdown(seconds) {
   const n = Math.max(0, Math.floor(Number(seconds)));
   const d = Math.floor(n / 86400), h = Math.floor(n % 86400 / 3600), m = Math.floor(n % 3600 / 60), s = n % 60;

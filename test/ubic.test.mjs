@@ -96,7 +96,7 @@ test('36h claim keeps 12h remainder; claimed UBIC1 is spendable while earning co
   assert.equal((await token.positions(alice.address)).claimedPeriods, 2n);
 });
 
-test('withdraw settles only remaining rewards, refunds principal and permits a fresh deposit', async t => {
+test('withdraw never mints, forfeits pending, refunds principal and permits a fresh deposit', async t => {
   const { token, alice, provider, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
   await advance(DAY);
@@ -105,7 +105,7 @@ test('withdraw settles only remaining rewards, refunds principal and permits a f
   const before = await provider.getBalance(alice.address);
   const receipt = await send(token.withdraw());
   assert.equal(await provider.getBalance(alice.address) - before + receipt.fee, UNIT);
-  assert.equal(await token.balanceOf(alice.address), 3n * TOKEN);
+  assert.equal(await token.balanceOf(alice.address), TOKEN);
   assert.deepEqual(Array.from(await token.positions(alice.address)), [0n, 0n, 0n]);
   assert.equal(await token.pending(alice.address), 0n);
   await assert.rejects(token.claim.staticCall());
@@ -113,7 +113,23 @@ test('withdraw settles only remaining rewards, refunds principal and permits a f
   await send(token.deposit({ value: UNIT }));
   await advance(DAY / 2);
   await send(token.withdraw());
-  assert.equal(await token.balanceOf(alice.address), 3n * TOKEN);
+  assert.equal(await token.balanceOf(alice.address), TOKEN);
+});
+
+test('mature direct withdrawal emits no Claim or mint Transfer even after 24h', async t => {
+  const { token, alice, provider, send, advance } = await fixture(t);
+  await send(token.deposit({ value: UNIT }));
+  await advance(3 * DAY);
+  assert.equal(await token.pending(alice.address), 3n * TOKEN);
+  const beforeSupply=await token.totalSupply();
+  const before=await provider.getBalance(alice.address);
+  const receipt=await send(token.withdraw());
+  assert.equal(await provider.getBalance(alice.address)-before+receipt.fee, UNIT);
+  assert.equal(await token.totalSupply(), beforeSupply);
+  assert.equal(await token.balanceOf(alice.address), 0n);
+  const events=receipt.logs.map(x=>{try{return token.interface.parseLog(x)?.name;}catch{return null;}}).filter(Boolean);
+  assert.deepEqual(events, ['Withdrawn']);
+  assert.equal(await token.pending(alice.address), 0n);
 });
 
 test('accounts are isolated; early withdrawal returns full principal with no rewards', async t => {
@@ -154,7 +170,7 @@ test('rejecting ETH receiver can claim; failed withdrawal rolls back; reentry bl
   await send(receiver.withdraw({ gasLimit: 500000 }));
   assert.equal(await receiver.blocked(), 4n);
   assert.equal(await receiver.received(), UNIT);
-  assert.equal(await token.balanceOf(address), 2n * TOKEN);
+  assert.equal(await token.balanceOf(address), TOKEN);
   assert.equal((await token.positions(address)).depositedAt, 0n);
 });
 
@@ -186,7 +202,7 @@ test('burning does not alter principal, time, or future earnings', async t => {
   assert.equal(await provider.getBalance(await token.getAddress()), UNIT);
   await advance(DAY);
   await send(token.withdraw());
-  assert.equal(await token.totalSupply(), TOKEN);
+  assert.equal(await token.totalSupply(), 0n);
 });
 
 test('burnFrom requires and consumes allowance; failed burn rolls back allowance', async t => {
@@ -211,7 +227,7 @@ test('extra ETH does not change rewards or refunds', async t => {
   await rpc.request({ method: 'evm_setAccountBalance', params: [await token.getAddress(), '0x' + (5n * UNIT).toString(16)] });
   await advance(DAY);
   await send(token.withdraw());
-  assert.equal(await token.totalSupply(), TOKEN);
+  assert.equal(await token.totalSupply(), 0n);
   assert.equal(await provider.getBalance(await token.getAddress()), 4n * UNIT);
 });
 
@@ -281,7 +297,7 @@ test('new positions obey current minimum and overfunding remains refundable', as
   const before = await provider.getBalance(alice.address);
   const receipt = await send(token.withdraw());
   assert.equal(await provider.getBalance(alice.address) - before + receipt.fee, principal);
-  assert.equal(await token.balanceOf(alice.address), TOKEN);
+  assert.equal(await token.balanceOf(alice.address), 0n);
 });
 
 test('underfunded exit returns all principal, forfeits pending only, and preserves issued tokens', async t => {
@@ -322,7 +338,7 @@ test('pre-boundary claims and late top-ups never double-count across epochs', as
   await assert.rejects(token.claim.staticCall());
   await send(token.topUp({ value: UNIT }));
   await send(token.withdraw());
-  assert.equal(await token.balanceOf(alice.address), 2000n * TOKEN);
+  assert.equal(await token.balanceOf(alice.address), 1000n * TOKEN);
 });
 
 test('underfunded refund failure preserves principal and entitlement', async t => {

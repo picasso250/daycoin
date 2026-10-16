@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { formatEther } from 'ethers';
+import { formatEther, ZeroAddress } from 'ethers';
 import { artifact, connect, checkedContract, mined, safeError } from './sepolia-common.mjs';
 let provider;
 try {
@@ -68,8 +68,18 @@ try {
       if (original.principal < minimum) console.log('Underfunded: pending rewards will be forfeited; principal is refunded.');
       const receipt = await wait(token.withdraw(), 'Withdraw all principal');
       assert.equal(events(receipt, 'Withdrawn')[0].args.amount, original.principal);
+      // Inspect only this transaction's logs: other users may claim or burn
+      // between our transaction and any global totalSupply() read.
+      const tokenAddress = (await token.getAddress()).toLowerCase();
+      const receiptEvents = receipt.logs
+        .filter(log => log.address.toLowerCase() === tokenAddress)
+        .map(log => { try { return token.interface.parseLog(log); } catch { return null; } })
+        .filter(Boolean);
+      assert.equal(receiptEvents.some(event => event.name === 'Claimed'), false);
+      assert.equal(receiptEvents.some(event => event.name === 'Transfer' &&
+        event.args.from.toLowerCase() === ZeroAddress.toLowerCase()), false);
       assert.equal((await token.positions(signer.address)).depositedAt, 0n);
-      console.log('Withdrawal passed. Position closed.');
+      console.log('Withdrawal passed. Position closed; no minting occurred.');
     }
   }
 } catch (error) { console.error(safeError(error)); process.exitCode = 1; }

@@ -1,5 +1,5 @@
 import { BrowserProvider, Contract, FetchRequest, Interface, JsonRpcProvider, formatEther, formatUnits, parseEther, keccak256 } from './ethers.min.js';
-import { positionState, countdown, emptyIndex, applyEvent, compactEth } from './model.mjs';
+import { positionState, countdown, emptyIndex, applyEvent, compactEth, withdrawGuidance, withdrawalConsentSnapshot, withdrawalNeedsNewConsent } from './model.mjs';
 import { prepareTransaction, rpcErrorDetail, isInsufficientFunds } from './transaction.mjs';
 
 const ADDRESS = '0xef04ABbc1EEf957715895c234f5dEef7d2452AE1';
@@ -85,7 +85,7 @@ function render() {
   deposit:['让第一天开始。',`新仓位按当前门槛存入${data ? ' ' + eth(data.required) + ' ETH' : '测试 ETH'}。一个地址同时最多一个仓位。`],
   topUp:['补足资格，保留时间。','补仓不重置计时，不增加每日发行速度。可以按缺口补足，也可以提前补足未来门槛。'],
   claim:['领取收入，继续参与。','领取所有未领取的整天奖励。本金保持质押，不足一天的进度保留。'],
-  withdraw:['你的本金，随时取回。',s.gap > 0n ? `当前未达门槛。退出将放弃 ${personal ? coin(personal.pending) : '—'} UBIC1 未铸造资格，但退回全部 ${personal ? eth(personal.position.principal) : '—'} ETH 本金。` : '结算剩余整天奖励，退回全部实际本金并关闭仓位。不足一天的时间将在退出后作废。']
+  withdraw:['你的本金，随时取回。',`只退回全部 ${personal ? eth(personal.position.principal) : '—'} ETH 本金，并关闭仓位。将放弃全部 ${personal ? coin(personal.pending) : '—'} UBIC1 未领取资格（包括成熟奖励）。如需保留奖励，请先 Claim。`]
  };
  text('action-title',copy[action][0]); text('action-description',copy[action][1]);
  const amountAction = action === 'deposit' || action === 'topUp';
@@ -207,9 +207,26 @@ function showTransaction(status,title,detail,hash){
  }
 }
 async function confirmWithdrawal(p,s){
- const detail=`将退回本金 ${eth(p.position.principal)} ETH（gas 另付）。\n`+(s.gap>0n?`当前未达质押门槛。退出将永久放弃 ${coin(p.pending)} UBIC1 的未铸造领取资格，已持有代币不受影响。`:`同时结算约 ${coin(p.pending)} UBIC1 的整天奖励。若交易执行前跨入新纪元且本金不足，未领取奖励将被放弃；最终以执行时状态为准。`);
- text('withdraw-detail',detail);const dialog=$('withdraw-dialog');dialog.returnValue='cancel';dialog.showModal();
- return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true}));
+ // Consent is fixed before showModal() and before its asynchronous user wait.
+ const snapshot=withdrawalConsentSnapshot(p,s);
+ const guidance=withdrawGuidance(p.position,data.required,p.pending);
+ const balance=coin(p.pending);
+ const heading=guidance.recommendClaim ? `你还有 ${balance} UBIC1 可以领取` : '退出仓位，取回本金';
+ text('withdraw-dialog-title',heading);
+ const detail=`将退回本金 ${eth(p.position.principal)} ETH（gas 另付）。\n`+
+  (guidance.recommendClaim
+   ? `你有 ${balance} UBIC1 已成熟且符合领取门槛。建议先 Claim，然后再 Withdraw。也可以主动放弃全部未领取奖励，直接退回本金。`
+   : guidance.forfeitsMature
+    ? `你有 ${balance} UBIC1 尚未领取，但当前本金不足领取门槛（还需补仓 ${eth(guidance.gap)} ETH）。你仍可直接退回全部本金，代价是放弃奖励。`
+    : '目前没有已成熟的待领取奖励。退出会放弃未满一天的计时进度。');
+ text('withdraw-detail',detail);
+ $('withdraw-claim').hidden=!guidance.recommendClaim;
+ text('withdraw-direct',guidance.forfeitsMature ? '放弃奖励，直接退本' : '确认退出并退款');
+ const dialog=$('withdraw-dialog');dialog.returnValue='cancel';
+ const result=new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue),{once:true}));
+ dialog.showModal();
+ (guidance.recommendClaim ? $('withdraw-claim') : $('withdraw-cancel')).focus();
+ return {choice:await result,snapshot};
 }
 
 async function transact(){
@@ -220,15 +237,39 @@ async function transact(){
   await refresh();
   if(!fresh()||!personal)throw Error('缺少新鲜链上数据，请稍后重试。');
   if(version!==accountVersion||owner!==account)throw Error('钱包账户或网络已变化，请重新操作。');
-  let s=state();
+  let s=state(), acceptedWithdrawal=null;
   if(selected==='claim'&&!s.claimable)throw Error(s.gap?'请先补足当前门槛。':'暂无完整周期奖励。');
-  if(selected==='withdraw'&&!await confirmWithdrawal(personal,s))return;
+  if(selected==='withdraw'){
+   const consent=await confirmWithdrawal(personal,s);
+   if(consent.choice==='claim'){
+    if(version!==accountVersion||owner!==account)throw Error('钱包账户已变化，请重新选择操作。');
+    setAction('claim');return; // No transaction or wallet signature is triggered by this choice.
+   }
+   if(consent.choice!=='confirm')return;
+   acceptedWithdrawal=consent.snapshot;
+  }
   // The dialog may stay open across an epoch boundary. Refresh before signing.
   await refresh();
   const accounts=await wallet.request({method:'eth_accounts'});
   if(BigInt(await wallet.request({method:'eth_chainId'}))!==CHAIN||accounts[0]?.toLowerCase()!==owner.toLowerCase()||version!==accountVersion)throw Error('钱包账户或网络已变化，交易未发送。');
   if(!fresh())throw Error('链上数据已失效，请重试。');
-  if(selected==='withdraw'&&state().gap>0n&&s.gap===0n){if(!await confirmWithdrawal(personal,state()))return;}
+  if(selected==='withdraw'&&withdrawalNeedsNewConsent(acceptedWithdrawal,withdrawalConsentSnapshot(personal,state()))){
+   // A new reward, claim eligibility or principal has changed while the dialog was open.
+   const renewed=await confirmWithdrawal(personal,state());
+   if(renewed.choice==='claim'){
+    if(version!==accountVersion||owner!==account)throw Error('钱包账户已变化，请重新选择操作。');
+    setAction('claim');return;
+   }
+   if(renewed.choice!=='confirm')return;
+   const secondConsent=renewed.snapshot;
+   await refresh();
+   const latestAccounts=await wallet.request({method:'eth_accounts'});
+   if(!fresh()||version!==accountVersion||owner!==account||
+      BigInt(await wallet.request({method:'eth_chainId'}))!==CHAIN||
+      latestAccounts[0]?.toLowerCase()!==owner.toLowerCase())throw Error('钱包状态或链上数据已变化，请重试。');
+   if(withdrawalNeedsNewConsent(secondConsent,withdrawalConsentSnapshot(personal,state())))
+    throw Error('待领取奖励或本金再次变化，请重新点击 Withdraw 以确认。');
+  }
   browser=new BrowserProvider(wallet,'any');const signer=await browser.getSigner(owner), contract=new Contract(ADDRESS,ABI,signer);
   let value=0n;if(selected==='deposit')value=data.required;
   if(selected==='topUp'){value=parseEther($('amount').value);if(value<=0n)throw Error('补仓金额必须大于零。');}
