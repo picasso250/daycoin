@@ -1,0 +1,52 @@
+name: UBIC1-v0.2 isolated browser E2E
+
+on:
+  push:
+    paths:
+      - 'contracts/UBIC1V02.sol'
+      - 'scripts/compile-v02.mjs'
+      - 'test/ubic-v02.test.mjs'
+      - 'sites/ubic1-v02/**'
+      - '.github/workflows/ubic1-v02-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-e2e:
+    name: Chromium + Ganache (no mainnet)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout fixed repository commit
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install contract testing dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install independent v0.2 UI testing dependencies
+        run: npm ci --prefix sites/ubic1-v02 --ignore-scripts --no-audit --no-fund
+
+      - name: Install browser runtime
+        working-directory: sites/ubic1-v02
+        run: npx playwright-core install --with-deps chromium
+
+      - name: Compile v0.2 locally (no signing or deployment)
+        run: npm run build:v02
+
+      - name: Run v0.2 contract tests
+        run: npm run test:v02
+
+      - name: Run v0.2 UI tests and browser E2E
+        run: npm --prefix sites/ubic1-v02 test
+
+      - name: Confirm production frontends unchanged
+        run: |
+          test ! -f sites/ubic1-v02/dist/deployment.json
+          grep -q 'address: null' sites/ubic1-v02/dist/config.mjs

@@ -13,7 +13,7 @@ process.env.UWS_USE_FALLBACK='true';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 process.chdir(root);
 const dist=path.join(root,'sites/ubic1-v02/dist');
-const edgePath=process.env.UBIC_E2E_BROWSER || (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe');
+const edgePath = process.env.UBIC_E2E_BROWSER || (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : (process.platform === 'win32' ? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' : undefined));
 const DAY=86400, UNIT=parseEther('0.1');
 const listen=server=>new Promise((resolve,reject)=>{
   server.once('error',reject);
