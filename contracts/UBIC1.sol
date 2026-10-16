@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.37;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-/// @notice One position per address, 1 UBIC per full day. The claim threshold
+/// @notice One position per address, 1 UBIC1 per full day. The claim threshold
 /// rises by 0.1 ETH every 1000 days from deployment, including for old positions.
 /// @dev No owner, upgrade, batch endpoint, arbitrary mint or rescue function.
-contract UBIC is ERC20Burnable, ReentrancyGuard {
+contract UBIC1 is ERC20Burnable, ReentrancyGuard {
     uint256 public constant DEPOSIT_STEP = 0.1 ether;
     uint256 public constant EPOCH_DURATION = 1000 days;
     uint256 public constant PERIOD = 1 days;
-    uint256 public constant REWARD = 10_000; // 1 UBIC = 10,000 xiao (肖).
+    uint256 public constant REWARD = 10_000; // 1 UBIC1 = 10,000 xiao (肖).
     uint256 public immutable genesisTime;
 
     struct Position {
@@ -36,7 +36,7 @@ contract UBIC is ERC20Burnable, ReentrancyGuard {
     event Claimed(address indexed account, uint256 reward);
     event Withdrawn(address indexed account, uint256 amount);
 
-    constructor() ERC20("UBIC", "UBIC") {
+    constructor() ERC20("UBIC1", "UBIC1") {
         genesisTime = block.timestamp;
     }
 

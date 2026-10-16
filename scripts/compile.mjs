@@ -6,11 +6,11 @@ import solc from 'solc';
 export function compile(extraSources = {}) {
   const input = {
     language: 'Solidity',
-    sources: { 'contracts/UBIC.sol': { content: fs.readFileSync('contracts/UBIC.sol', 'utf8') }, ...extraSources },
+    sources: { 'contracts/UBIC1.sol': { content: fs.readFileSync('contracts/UBIC1.sol', 'utf8') }, ...extraSources },
     settings: {
       optimizer: { enabled: true, runs: 200 },
       evmVersion: 'shanghai',
-      outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object', 'evm.deployedBytecode.object'] } }
+      outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object', 'evm.deployedBytecode.object', 'evm.deployedBytecode.immutableReferences'] } }
     }
   };
   const output = JSON.parse(solc.compile(JSON.stringify(input), {
@@ -29,6 +29,6 @@ export function compile(extraSources = {}) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const contracts = compile();
   fs.mkdirSync('artifacts', { recursive: true });
-  fs.writeFileSync('artifacts/UBIC.json', JSON.stringify(contracts['contracts/UBIC.sol'].UBIC, null, 2));
-  console.log(`Compiled UBIC with ${solc.version()} (Shanghai).`);
+  fs.writeFileSync('artifacts/UBIC1.json', JSON.stringify(contracts['contracts/UBIC1.sol'].UBIC1, null, 2));
+  console.log(`Compiled UBIC1 with ${solc.version()} (Shanghai).`);
 }

@@ -5,14 +5,14 @@ import { compile } from '../scripts/compile.mjs';
 process.env.UWS_USE_FALLBACK = 'true';
 const { default: ganache } = await import('ganache');
 const helper = `// SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
-import {UBIC} from "contracts/UBIC.sol";
+pragma solidity 0.8.37;
+import {UBIC1} from "contracts/UBIC1.sol";
 contract Receiver {
-    UBIC public token;
+    UBIC1 public token;
     uint256 public blocked;
     uint256 public received;
     bool public reject;
-    constructor(UBIC t) { token = t; }
+    constructor(UBIC1 t) { token = t; }
     function deposit() external payable { token.deposit{value: msg.value}(); }
     function claim() external { token.claim(); }
     function topUp() external payable { token.topUp{value: msg.value}(); }
@@ -28,7 +28,7 @@ contract Receiver {
     }
 }`;
 const compiled = compile({ 'test/Receiver.sol': { content: helper } });
-const artifact = compiled['contracts/UBIC.sol'].UBIC;
+const artifact = compiled['contracts/UBIC1.sol'].UBIC1;
 const UNIT = parseEther('0.1'), TOKEN = 10000n, DAY = 86400;
 
 async function fixture(t) {
@@ -80,7 +80,7 @@ test('early and repeated claims preserve principal and original timestamp', asyn
   assert.equal(await token.totalSupply(), TOKEN);
 });
 
-test('36h claim keeps 12h remainder; claimed UBIC is spendable while earning continues', async t => {
+test('36h claim keeps 12h remainder; claimed UBIC1 is spendable while earning continues', async t => {
   const { token, alice, bob, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
   const started = (await token.positions(alice.address)).depositedAt;
