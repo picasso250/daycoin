@@ -2,7 +2,7 @@ import { BrowserProvider, Contract, Interface, JsonRpcProvider, parseEther, form
 import { CONFIG } from './config.mjs';
 import { STEP, DAY, EPOCH_SECONDS, positionState, truncateToken, depositWarning } from './model.mjs';
 import { prepareTransaction, errorDetail } from './transaction.mjs';
-import { assertFreshBlock, normalizeChainId, pendingKey, readUnresolved, writeUnresolved, clearUnresolved, isRejected, isIdenticalTransaction } from './security.mjs';
+import { assertFreshBlock, isRejected, isIdenticalTransaction } from './security.mjs';
 
 const ABI = [
   'function currentEpoch() view returns(uint256)',
@@ -36,8 +36,7 @@ const explorer = CONFIG.explorerUrl ?? '';
 let wallet = null, account = null, walletChain = null;
 let verified = false, freshAt = 0, block = null, globalState = null, personal = null;
 let action = 'deposit', busy = false, accountVersion = 0, refreshPromise = null;
-let lastBlock = null, unresolved = null, operationId = 0;
-const storage = window.localStorage;
+let lastBlock = null, outcomeUnknown = false, operationId = 0;
 
 function showEnvironment(ok, message) {
   $('environment').classList.toggle('safe',ok);
@@ -55,10 +54,7 @@ function failClosed(message) {
   render();
 }
 function isFresh() { return !!(verified && freshAt>0 && Date.now()-freshAt<60000 && globalState && lastBlock && Number(Date.now()/1000)-lastBlock.timestamp<=600); }
-function txKey(owner=account) { return owner ? pendingKey(CHAIN,address,owner) : null; }
-function restoreUnresolved() { unresolved=txKey()?readUnresolved(storage,txKey()):null;render(); }
-function setUnresolved(record) {writeUnresolved(storage,txKey(record.from),record);unresolved=record;render();}
-function clearPendingRecord() {if(txKey())clearUnresolved(storage,txKey());unresolved=null;render();}
+
 function checkOperation(version) {if(version!==operationId)throw Error('操作已失效：钱包网络或账户发生变化。');}
 function snapshot() {
   return {version:accountVersion,owner:account,
@@ -85,8 +81,7 @@ function render() {
   text('chain-label', configured ? `${CONFIG.label} · Chain ID ${CONFIG.chainId}` : '未配置');
   text('contract-address', address ?? '未部署');
   text('code-status', verified ? '运行时代码 Hash 已核对' : '未验证 · 禁止交易');
-  $('unresolved').hidden=!unresolved;
-  text('unresolved-detail',unresolved ? `操作 ${unresolved.action}，金额 ${unresolved.value} wei，nonce ${unresolved.nonce ?? '未知'}，Hash ${unresolved.hash ?? '未获得'}。该操作可能已经上链，禁止重复提交。` : '');
+  $('unknown').hidden = !outcomeUnknown;
   const g=globalState, p=personal, pos=p?.position, status=positionState(pos,g?.required??STEP,p?.pending??0n);
   text('required',g?formatEther(g.required)+' ETH':'—');
   text('supply',g?truncateToken(g.supply,6)+' UBIC1':'—');
@@ -106,7 +101,7 @@ function render() {
       '未达标，无奖励');
     text('sync-status',`区块 #${block} · ${date(g.time)} · 快照值 ${isFresh()?'已更新':'已失效'}`);
   } else text('sync-status','未连接已验证链上数据');
-  $('submit').disabled = busy || !!unresolved || !configured || !isFresh() || !p || !account || walletChain!==CHAIN ||
+  $('submit').disabled = busy || outcomeUnknown || !configured || !isFresh() || !p || !account || walletChain!==CHAIN ||
     (action==='claim'&&!status.claimable) || (action==='withdraw'&&!status.active) ||
     (action==='deposit'&&!validDeposit());
   $('refresh').disabled=busy||!configured;
@@ -118,7 +113,7 @@ function render() {
   };
   text('action-title',copy[action][0]);text('action-description',copy[action][1]);
   $('amount-field').hidden=action!=='deposit';
-  text('submit',unresolved?'存在未核对交易 · 禁止重复提交':busy?'等待交易处理…':
+  text('submit',outcomeUnknown?'本页结果未知 · 请核对钱包':busy?'等待交易处理…':
     !configured?'尚未部署 v0.2 · 禁止交易':
     !verified?'等待主网代码核验':
     !account?'请先连接钱包':
@@ -215,60 +210,18 @@ async function connect() {
     const accounts=await wallet.request({method:'eth_requestAccounts'});
     const chain=await wallet.request({method:'eth_chainId'});
     account=accounts[0]??null;walletChain=BigInt(chain);accountVersion++;operationId++;
-    restoreUnresolved();
     wallet.on?.('accountsChanged', accountsChanged);
     wallet.on?.('chainChanged',chainChanged);
     render();await refresh();
   }catch(e){showTx('Failed',errorDetail(e));}
 }
-function accountsChanged(accounts){account=accounts[0]??null;accountVersion++;operationId++;personal=null;restoreUnresolved();render();void refresh();}
+function accountsChanged(accounts){account=accounts[0]??null;accountVersion++;operationId++;personal=null;render();void refresh();}
 function chainChanged(chain){walletChain=BigInt(chain);accountVersion++;operationId++;personal=null;render();void refresh();}
-// Always reconcile on the independently verified chain, never on a wallet
-// provider that might have silently switched networks after a signature.
-async function reconcileUnresolved() {
-  if(!unresolved||!account||busy)return;
-  const record=unresolved;
-  try {
-    if(!await refresh())throw Error('无法刷新已验证的链上状态');
-    if(record.hash) {
-      const [receipt,tx]=await Promise.all([
-        rpc.getTransactionReceipt(record.hash),rpc.getTransaction(record.hash)
-      ]);
-      if(receipt&&isIdenticalTransaction(tx,record) &&
-         receipt.to?.toLowerCase()===address.toLowerCase() &&
-         receipt.from?.toLowerCase()===account.toLowerCase() &&
-         (receipt.status===1||receipt.status===0)) {
-        clearPendingRecord();
-        showTx(receipt.status===1?'Confirmed':'Failed',
-          receipt.status===1?'独立 RPC 已核实目标合约执行成功。':'独立 RPC 已核实此笔交易已回滚。',record.hash);
-        await refresh();
-        return;
-      }
-    }
-    const latestNonce=await rpc.getTransactionCount(account,'latest');
-    showTx('Pending',`尚未能够独立验证此交易。链上账户 nonce 为 ${latestNonce}，提交前为 ${record.nonce}；可能仍在排队、已替换或响应丢失。禁止直接重复发送。`,record.hash);
-  }catch(e){showTx('Pending',`尚未核清交易：${errorDetail(e)}。请勿重复提交。`,record.hash);}
-}
-async function manualResolve() {
-  if(!unresolved||busy)return;
-  // Do not silently unfreeze a lost response: the user must explicitly
-  // acknowledge that a duplicate Deposit may destroy already earned UBIC1.
-  const record=unresolved;
-  if(!window.confirm(`此交易结果尚未证实（nonce ${record.nonce}，Hash ${record.hash??'未知'}）。\n必须先在钱包和链上核对，不要仅凭余额或本页面判定失败。\n确认已独立检查该地址上的交易记录？`))return;
-  const typed=window.prompt('若确认自行承担再次操作可能造成的重复存款/奖励损失风险，请输入：已核对');
-  if(typed!=='已核对')return;
-  clearPendingRecord();
-  showTx('Notice','人工解除前端重复提交锁。此操作不能证明原交易失败；下一笔仍需要重新确认。');
-  await refresh();
-}
-async function transaction() {
-  // The lock MUST be acquired synchronously before ANY await, including
-  // stale-RPC refresh or dialog creation.
-  if(!configured||busy||unresolved)return;
-  busy=true;
-  const op=++operationId, requestedAction=action;
-  let hash=null,stage='准备交易',browser=null,submissionStarted=false,record=null;
-  render();
+// A small, single-operation UI. Transaction recovery belongs to the wallet.
+// Losing the broadcast response is irreducibly uncertain; stop THIS PAGE
+// from retrying and let the user examine the wallet / explorer.
+async function runTransaction(op, requestedAction) {
+  let hash = null, stage = '准备交易', browser = null, submissionStarted = false;
   try {
     if(!account)throw Error('请先连接钱包');
     if(walletChain!==CHAIN)throw Error('钱包链 ID 不匹配，禁止交易');
@@ -283,7 +236,7 @@ async function transaction() {
       text('deposit-dialog-title',warning.title);
       text('deposit-detail',`本次存入 ${formatEther(value)} ETH；当前本金 ${formatEther(before.principal)} ETH；截至最新区块未领取 ${truncateToken(before.pending,12)} UBIC1。\n${warning.detail}\n确认后才会请求钱包签名。实际执行时可能又多累计奖励，所有未领取的都会被放弃。`);
       if(await choose('deposit-dialog',[['deposit-cancel','cancel'],['deposit-confirm','confirm']])!=='confirm')return;
-    }else if(requestedAction==='withdraw') {
+    } else if(requestedAction==='withdraw') {
       if(before.principal===0n)throw Error('没有仓位');
       text('withdraw-detail',`将退回 ${formatEther(before.principal)} ETH 本金（Gas 另付），丢弃 ${truncateToken(before.pending,12)} UBIC1 尚未领取奖励。即使失格也可直接 Withdraw。`);
       $('withdraw-claim').hidden=before.pending===0n;
@@ -292,82 +245,91 @@ async function transaction() {
       ]);
       if(decision==='claim'){action='claim';return;}
       if(decision!=='confirm')return;
-    }else if(requestedAction==='claim' && before.pending===0n)throw Error('暂无可领取奖励');
+    } else if(requestedAction==='claim' && before.pending===0n)throw Error('暂无可领取奖励');
     checkOperation(op);
     await checkWallet(before);checkOperation(op);
     if(!await refresh())throw Error('无法重新确认链上状态');
     checkOperation(op);await checkWallet(before);checkOperation(op);
     if(!personal||before.principal!==personal.position.principal||before.cursor!==personal.position.cursor)
       throw Error('仓位在确认期间改变：请重新操作并阅读新的奖励损失提示。');
-    const tx={from:account,to:address,data:iface.encodeFunctionData(requestedAction),value,chainId:CHAIN};
+
+    const tx={from:before.owner,to:address,data:iface.encodeFunctionData(requestedAction),value,chainId:CHAIN};
     stage='只读 RPC 模拟与 Gas 检查';
     showTx('Pending','正在模拟交易，尚未请求钱包签名');
     const gas=await prepareTransaction(rpc,tx);
-    checkOperation(op);
-    const nonce=await rpc.getTransactionCount(account,'pending');
     checkOperation(op);await checkWallet(before);checkOperation(op);
     stage='建立固定网络的签名上下文';
     showTx('Pending',`请核对链 ID ${CHAIN}、目标地址 ${address} 和 ${formatEther(value)} ETH 金额。`);
     browser=new BrowserProvider(wallet,{name:CONFIG.label,chainId:Number(CHAIN)});
-    const signer=await browser.getSigner(account);
-    // Important: a network-change event can fire INSIDE getSigner().
+    const signer=await browser.getSigner(before.owner);
     checkOperation(op);await checkWallet(before);checkOperation(op);
-    stage='等待钱包签名';
-    record={action:requestedAction,from:account,to:address,address,data:tx.data,
-      value:value.toString(),nonce,chainId:CHAIN.toString(),hash:null,
-      startedAt:Date.now(),state:'requesting'};
-    // Persist the submission before invoking the wallet, since it can broadcast
-    // successfully yet fail to return a transaction hash.
-    setUnresolved(record);
+    stage='等待钱包签名/广播';
     submissionStarted=true;
     const outgoing=await signer.sendTransaction({
       to:address,data:tx.data,value,gasLimit:gas.gasLimit,chainId:CHAIN
     });
     hash=outgoing.hash;
-    record={...record,hash,nonce:outgoing.nonce,state:'broadcast'};
-    setUnresolved(record);
     checkOperation(op);
     stage='独立 RPC 等待回执';
-    showTx('Pending','已收到交易 Hash，等待已验证链上的确认。切勿重复提交。',hash);
+    showTx('Pending','已获取交易 Hash，等待预期链确认。',hash);
     const receipt=await rpc.waitForTransaction(hash,1,120000);
-    if(!receipt)throw Error('等待回执超时，仍可能正在处理');
+    if(!receipt)throw Error('等待回执超时，交易可能仍在处理');
     const actual=await rpc.getTransaction(hash);
-    if(!isIdenticalTransaction(actual,record) ||
-      receipt.to?.toLowerCase()!==address.toLowerCase() ||
-      receipt.from?.toLowerCase()!==account.toLowerCase())
-      throw Error('交易字段无法与预期网络和合约匹配，保留未决状态');
+    if(!isIdenticalTransaction(actual,tx) ||
+       receipt.to?.toLowerCase()!==address.toLowerCase() ||
+       receipt.from?.toLowerCase()!==before.owner.toLowerCase())
+      throw Error('预期链交易字段无法验证');
     checkOperation(op);
-    if(receipt.status===0){
-      clearPendingRecord();
-      showTx('Failed','独立 RPC 确认交易已回滚；已安全解除前端锁。',hash);
+    if(receipt.status===0) {
+      showTx('Failed','已在预期链上确认交易回滚。',hash);
       return;
     }
-    if(receipt.status!==1)throw Error('交易状态不明确');
-    clearPendingRecord();
+    if(receipt.status!==1)throw Error('链上执行结果不明确');
     showTx('Confirmed',`${requestedAction} 已在预期链区块 ${receipt.blockNumber} 确认。`,hash);
     if(requestedAction==='deposit')action='claim';
     if(requestedAction==='withdraw')action='deposit';
     await refresh();
-  }catch(e){
-    if(submissionStarted && isRejected(e) && !hash && op===operationId) {
-      // An explicit wallet rejection is distinguishable from a lost response.
-      clearPendingRecord();
-      showTx('Failed','钱包明确拒绝签名，未提交。',null);
-    }else if(submissionStarted){
-      // Unknown outcomes must never be labelled Failed or silently unlocked.
-      showTx('Pending',`${stage}: ${errorDetail(e)}。结果未知，可能已经广播或执行。请先核查，勿重复提交。`,hash);
-    }else {
-      showTx('Failed',`${stage}: ${errorDetail(e)}`);
+  }catch(e) {
+    if(submissionStarted && !hash && isRejected(e)) {
+      showTx('Failed','钱包明确拒绝交易，未发送。');
+    } else if(submissionStarted) {
+      outcomeUnknown=true;
+      showTx('Pending',`结果未知（${stage}）：${errorDetail(e)}。交易可能已经执行；请先在钱包或可信区块浏览器核对，勿立即重试。`,hash);
+    } else {
+      showTx('Failed',`${stage}：${errorDetail(e)}`);
     }
-  }finally{busy=false;browser?.destroy();render();}
+  }finally{browser?.destroy();render();}
 }
 
+async function transaction() {
+  // Synchronous in-tab guard before any await. Web Locks are optional:
+  // supported browser => avoid concurrent signing within the same origin;
+  // unsupported browser => proceed normally without bespoke lock storage.
+  if(!configured||busy||outcomeUnknown)return;
+  busy=true;
+  const op=++operationId, requestedAction=action, owner=account;
+  render();
+  try{
+    if(navigator.locks?.request && owner) {
+      const lockName=`ubic1-v02:${CHAIN}:${address.toLowerCase()}:${owner.toLowerCase()}`;
+      await navigator.locks.request(lockName,{ifAvailable:true},async lock=>{
+        if(!lock) {
+          showTx('Notice','另一个标签页正在进行钱包操作，请稍后重新点击。本页未发送交易。');
+          return;
+        }
+        await runTransaction(op,requestedAction);
+      });
+    }else{
+      await runTransaction(op,requestedAction);
+    }
+  }catch(e){
+    showTx('Failed',`浏览器操作协调失败：${errorDetail(e)}。没有发送新交易。`);
+  }finally{busy=false;render();}
+}
 $('connect').addEventListener('click',connect);
 $('refresh').addEventListener('click',()=>void refresh());
 $('submit').addEventListener('click',()=>void transaction());
 $('amount').addEventListener('input',render);
-$('reconcile').addEventListener('click',()=>void reconcileUnresolved());
-$('manual-resolve').addEventListener('click',()=>void manualResolve());
 document.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click',()=>setAction(el.dataset.action)));
 if(configured) {
   // The displayed config is never a fallback to v0.1. Stale/failing RPC disables signing.

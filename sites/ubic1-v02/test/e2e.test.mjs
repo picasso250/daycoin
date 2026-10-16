@@ -276,12 +276,15 @@ test('security V02-03: months-old RPC block disables Deposit instead of marking 
   assert.equal(await page.locator('#submit').isDisabled(),true);
 });
 
-test('security V02-04: broadcast accepted but response lost stays Pending across reload', {timeout:50000},async t=>{
+test('security V02-04: lost broadcast response is Unknown in current page; no recovery state', {timeout:50000},async t=>{
   const {page,url,contract,account}=await lab(t);
   await page.goto(url);await waitValue(page,'#environment-title','已验证');
   await page.locator('#connect').click();await waitValue(page,'#principal','0.0 ETH');
   await page.evaluate(()=>{
     const w=window.ethereum, old=w.request;
+    // Storage may be unavailable; UI must not use it for transaction tracking.
+    Storage.prototype.setItem=()=>{throw Error('Forbidden persistence');};
+    Storage.prototype.removeItem=()=>{throw Error('Forbidden persistence');};
     w.request=async args=>{
       const result=await old(args);
       if(args.method==='eth_sendTransaction')throw Object.assign(new Error('response lost after broadcast'),{code:-32000});
@@ -290,15 +293,61 @@ test('security V02-04: broadcast accepted but response lost stays Pending across
   });
   await submitDeposit(page,'0.1');
   await waitValue(page,'#tx-title','Pending');
-  await page.locator('#unresolved:not([hidden])').waitFor();
+  await page.locator('#unknown:not([hidden])').waitFor();
   assert.equal((await contract.positions(account)).principal,parseEther('0.1'));
   assert.equal(await page.locator('#submit').isDisabled(),true);
   assert.match(await page.locator('#tx-detail').innerText(),/结果未知/);
+  assert.match(await page.locator('#unknown').innerText(),/刷新/);
   await page.reload();await waitValue(page,'#environment-title','已验证');
   await page.locator('#connect').click();
-  await page.locator('#unresolved:not([hidden])').waitFor();
-  assert.equal(await page.locator('#submit').isDisabled(),true);
-  await page.locator('#reconcile').click();
-  await waitValue(page,'#tx-title','Pending');
-  assert.equal(await page.locator('#submit').isDisabled(),true);
+  await waitValue(page,'#principal','0.1 ETH');
+  // Explicitly accepted limitation: reloading clears the in-memory warning.
+  assert.equal(await page.locator('#unknown').isHidden(),true);
+});
+
+test('security: Web Locks present => a concurrent local lock prevents another UI submission', {timeout:50000},async t=>{
+  const {page,url,contract,account,rpc}=await lab(t);
+  await page.goto(url);await waitValue(page,'#environment-title','已验证');
+  await page.locator('#connect').click();await waitValue(page,'#principal','0.0 ETH');
+  const address=await contract.getAddress();
+  await page.evaluate(async({address,account})=>{
+    const name=`ubic1-v02:31337:${address.toLowerCase()}:${account.toLowerCase()}`;
+    let acquired;
+    const ready=new Promise(resolve=>{acquired=resolve;});
+    const hold=new Promise(resolve=>{window.__unlockTestLock=resolve;});
+    navigator.locks.request(name,async lock=>{acquired();await hold;});
+    await ready;
+  },{address,account});
+  await page.locator('#amount').fill('0.001');
+  await page.locator('#submit').click();
+  await waitValue(page,'#tx-detail','另一个标签页正在进行钱包操作');
+  assert.equal(await rpc.getBalance(address),0n);
+  assert.equal(await page.locator('#submit').isEnabled(),true);
+  await page.evaluate(()=>window.__unlockTestLock());
+  await submitDeposit(page,'0.001');
+  await waitValue(page,'#tx-title','Confirmed');
+  assert.equal((await contract.positions(account)).principal,parseEther('0.001'));
+});
+
+test('security: optional Web Locks missing => wallet transaction remains available', {timeout:50000},async t=>{
+  const {page,url,contract,account}=await lab(t);
+  await page.goto(url);await waitValue(page,'#environment-title','已验证');
+  await page.locator('#connect').click();await waitValue(page,'#principal','0.0 ETH');
+  await page.evaluate(()=>Object.defineProperty(navigator,'locks',{value:undefined,configurable:true}));
+  await submitDeposit(page,'0.001');
+  await waitValue(page,'#tx-title','Confirmed');
+  assert.equal((await contract.positions(account)).principal,parseEther('0.001'));
+});
+
+test('security: transaction simulation without storage remains independent of other tab state', {timeout:50000},async t=>{
+  const {page,url,contract,account}=await lab(t);
+  await page.goto(url);await waitValue(page,'#environment-title','已验证');
+  await page.locator('#connect').click();await waitValue(page,'#principal','0.0 ETH');
+  await page.evaluate(()=>{
+    localStorage.setItem('ubic1:v02:tx:legacy','unrelated legacy record');
+  });
+  await submitDeposit(page,'0.001');
+  await waitValue(page,'#tx-title','Confirmed');
+  assert.equal((await contract.positions(account)).principal,parseEther('0.001'));
+  assert.equal(await page.evaluate(()=>localStorage.getItem('ubic1:v02:tx:legacy')),'unrelated legacy record');
 });

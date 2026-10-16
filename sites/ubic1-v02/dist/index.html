@@ -89,7 +89,7 @@
 <p class="v02-help v02-warning">任何 Deposit（包括追加 1 wei）都会永久放弃未领取奖励。需要保留时，务必先 Claim。Withdraw 亦不自动 Claim。</p>
 <p class="v02-muted" id="wallet-id">尚未连接钱包</p>
 </section></div>
-<div id="unresolved" class="v02-banner" hidden role="alert"><strong>存在结果未核实的交易 · 已暂停重复操作</strong><p id="unresolved-detail"></p><p>网络响应丢失或钱包切链时，交易可能已经广播。请先在钱包与可信区块浏览器核对地址、nonce 和交易记录。若页面不能继续操作，可直接通过可信工具调用合约 withdraw()；前端锁不会锁住链上本金。</p><div class="v02-actions" style="margin-top:12px"><button id="reconcile" class="v02-button secondary" type="button">使用已验证 RPC 核查 ↻</button><button id="manual-resolve" class="v02-button secondary" type="button">我已独立核对 · 人工解锁</button></div></div>
+<div id="unknown" class="v02-banner" hidden role="alert"><strong>交易结果未知 · 本页已停止重复提交</strong><p>钱包可能已经广播交易。请先查看钱包交易历史，并在可信区块浏览器核对网络、交易 Hash 和本金。此页面不负责恢复交易记录。刷新网页可重新操作，但刷新不代表之前的交易失败。用户仍可通过可信工具直接调用链上的 Withdraw。</p></div>
 <div id="transaction" class="v02-tx" hidden aria-live="polite"><strong id="tx-title"></strong><p id="tx-detail"></p><a id="tx-link" hidden target="_blank" rel="noopener noreferrer">查看交易 ↗</a></div>
 <section class="v02-panel" style="margin-top:22px"><div class="v02-eyebrow">03 / LIMITATIONS</div><h2>公开规则，不等于零风险。</h2>
 <p class="v02-help">本合约无管理员、无升级、无救援。智能合约钱包若永久拒收 ETH，可能永远无法提回本金。一个地址并不等于一个人，UBIC1 不提供人口身份验证。所有交易须由钱包本人明确签名；本页面本身不保管密钥。</p>
