@@ -13,4 +13,4 @@ const server=http.createServer((req,res)=>{
   res.writeHead(200,{'Content-Type':(mime[path.extname(file)]||'application/octet-stream')+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
   fs.createReadStream(file).pipe(res);
 });
-server.listen(5176,'127.0.0.1',()=>console.log('UBIC1-v0.2 (UNDEPLOYED, DISABLED): http://127.0.0.1:5176'));
+server.listen(5176,'127.0.0.1',()=>console.log('UBIC1-v0.2 (Sepolia testnet): http://127.0.0.1:5176'));

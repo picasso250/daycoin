@@ -57,7 +57,7 @@ test('generic deploy and verify use exactly env file and artifact, local Sepolia
   const provider=new JsonRpcProvider(url,undefined,{cacheTimeout:-1,batchMaxCount:1});
   t.after(async()=>{provider.destroy();await server.close();fs.rmSync(dir,{recursive:true,force:true});});
   fs.mkdirSync(path.join(dir,'scripts'));
-  for(const name of ['deploy.mjs','verify.mjs','deployment-common.mjs','mainnet-journal.mjs']){
+  for(const name of ['deploy.mjs','verify.mjs','deployment-common.mjs','deployment-journal.mjs']){
     fs.copyFileSync(path.join('scripts',name),path.join(dir,'scripts',name));
   }
   fs.symlinkSync(path.resolve('node_modules'),path.join(dir,'node_modules'),'junction');
@@ -124,7 +124,7 @@ test('generic deploy refuses wrong chain before any broadcast', {timeout:40000},
   t.after(async()=>{await server.close();fs.rmSync(dir,{recursive:true,force:true});});
   const url='http://127.0.0.1:'+server.address().port;
   fs.mkdirSync(path.join(dir,'scripts'));
-  for(const name of ['deploy.mjs','deployment-common.mjs','mainnet-journal.mjs'])fs.copyFileSync(path.join('scripts',name),path.join(dir,'scripts',name));
+  for(const name of ['deploy.mjs','deployment-common.mjs','deployment-journal.mjs'])fs.copyFileSync(path.join('scripts',name),path.join(dir,'scripts',name));
   fs.symlinkSync(path.resolve('node_modules'),path.join(dir,'node_modules'),'junction');
   fs.mkdirSync(path.join(dir,'artifacts'));
   const built=compile({'contracts/UBIC1V02.sol':{content:fs.readFileSync('contracts/UBIC1V02.sol','utf8')}})['contracts/UBIC1V02.sol'].UBIC1V02;

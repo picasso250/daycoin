@@ -3,7 +3,7 @@ import {
   ContractFactory, JsonRpcProvider, Wallet, formatEther,
   getCreateAddress, keccak256, parseEther
 } from 'ethers';
-import { reserveDeployment, updateDeployment, broadcastRecordedTransaction } from './mainnet-journal.mjs';
+import { reserveDeployment, updateDeployment, broadcastRecordedTransaction } from './deployment-journal.mjs';
 import {
   readConfig, readArtifact, creationHex, creationHash, deploymentFile,
   requireChain, verifyDeployment, safeError

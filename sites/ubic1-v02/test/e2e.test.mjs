@@ -223,6 +223,33 @@ test('browser E2E: deployed wallet on the wrong chain cannot transact', {timeout
   assert.equal(await page.locator('#submit').isDisabled(),true);
 });
 
+test('wallet compatibility: non-configurable proxied on getter cannot block connection or Deposit', {timeout:50000},async t=>{
+  const {page,url,contract,account}=await lab(t);
+  await page.goto(url);await waitValue(page,'#environment-title','已验证');
+  await page.evaluate(()=>{
+    const raw=window.ethereum;
+    Object.defineProperty(raw,'on',{value:raw.on,configurable:false,writable:false});
+    window.ethereum=new Proxy(raw,{
+      get(target,key,receiver){
+        if(key==='on')return (...args)=>target.on(...args);
+        return Reflect.get(target,key,receiver);
+      }
+    });
+  });
+  const error=await page.evaluate(()=>{
+    try { void window.ethereum.on; return ''; }
+    catch(e){ return e.message; }
+  });
+  assert.match(error,/read.only and non.configurable|proxy|Proxy/i);
+  await page.locator('#connect').click();
+  await waitValue(page,'#principal','0.0 ETH');
+  assert.equal(await page.locator('#tx-title').count(),1);
+  assert.equal(await page.locator('#transaction').isHidden(),true);
+  await submitDeposit(page,'0.001');
+  await waitValue(page,'#tx-title','Confirmed');
+  assert.equal((await contract.positions(account)).principal,parseEther('0.001'));
+});
+
 test('security V02-01: chainChanged during getSigner invalidates signing; no transaction is sent', {timeout:50000},async t=>{
   const {page,url,contract,rpc}=await lab(t);
   await page.goto(url);await waitValue(page,'#environment-title','已验证');
@@ -257,6 +284,7 @@ test('security V02-02: one stale snapshot double-click cannot send two Deposits'
     window.sent=[];
     w.request=async args=>{if(args.method==='eth_sendTransaction')window.sent.push(args.params[0]);return old(args);};
     const now=Date.now.bind(Date);Date.now=()=>now()+61000;
+    document.querySelector('#amount').value='0.001';
     document.querySelector('#submit').click();
     document.querySelector('#submit').click();
   });

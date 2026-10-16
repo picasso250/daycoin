@@ -1,4 +1,4 @@
-import { reserveDeployment } from '../../scripts/mainnet-journal.mjs';
+import { reserveDeployment } from '../../scripts/deployment-journal.mjs';
 try {
   reserveDeployment(process.argv[2], { chainId: 1, deployer: '0x0000000000000000000000000000000000000001' });
   process.stdout.write('reserved\n');

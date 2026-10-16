@@ -49,13 +49,13 @@
 </style>
 </head>
 <body>
-<div class="test-strip"><span class="dot"></span> UBIC1-v0.2 <span class="strip-rule"></span> 独立实验版 · 未部署主网</div>
+<div class="test-strip"><span class="dot"></span> UBIC1-v0.2 <span class="strip-rule"></span> SEPOLIA 测试网 · 仅测试 ETH · 非主网</div>
 <div class="shell">
 <header><a class="brand" href="./" aria-label="UBIC1-v0.2"><span class="brand-mark">u<span>1</span></span><span>UBIC<span class="brand-one">1</span></span></a>
 <nav class="site-nav"><a href="./" aria-current="page">v0.2</a><a href="https://github.com/picasso250/ubic1/blob/main/UBIC1-V0.2.md" target="_blank" rel="noopener noreferrer">规则 ↗</a><button class="v02-button secondary" id="connect" type="button">Connect Wallet ↗</button></nav></header>
 <main>
 <section class="intro"><div><div class="v02-eyebrow">A CONTINUOUS MONETARY EXPERIMENT</div><h1>One Address.<br><em>One Coin / Day.</em></h1><p>按秒线性增长，领取时铸造。<br>存款与发行权分离，随时可退还记录本金。</p></div><div class="intro-stamp"><span class="stamp-number">0.2</span><span>UBIC1 / EXPERIMENT</span><small>18 DECIMALS · LINEAR</small></div></section>
-<div id="environment" class="v02-banner" role="status"><strong id="environment-title">未部署 · 交易已禁用</strong><p id="environment-desc">当前页面没有连接任何 v0.2 合约。等待独立审核和部署。</p></div>
+<div id="environment" class="v02-banner" role="status"><strong id="environment-title">正在验证 Sepolia 测试合约</strong><p id="environment-desc">验证链 ID 和真实部署的合约代码后才能交易。此站仅使用 Sepolia 测试 ETH。</p></div>
 <div id="warning" class="v02-banner" hidden role="alert"></div>
 <div class="v02-grid">
 <div class="v02-stat"><label>当前最低质押资格</label><strong id="required">—</strong><div class="v02-muted">每 1000 天提高 0.1 ETH</div></div>
@@ -84,7 +84,7 @@
 </div>
 <h3 id="action-title">Deposit · 存入与追加</h3>
 <p id="action-description" class="v02-help">任意正数额 ETH。每次 Deposit 都会清空尚未 Claim 的奖励并重置奖励时钟。</p>
-<div class="v02-control" id="amount-field"><label for="amount">金额（ETH）</label><input id="amount" inputmode="decimal" autocomplete="off" value="0.001" placeholder="0.001" aria-describedby="amount-help"><small id="amount-help" class="v02-muted">最小 1 wei；必须留有 Gas。</small></div>
+<div class="v02-control" id="amount-field"><label for="amount">金额（ETH）</label><input id="amount" inputmode="decimal" autocomplete="off" value="0.1" placeholder="0.1" aria-describedby="amount-help"><small id="amount-help" class="v02-muted">任意正数可存入，但至少 0.1 Sepolia ETH 才开始累计奖励；必须留有 Gas。</small></div>
 <div class="v02-actions"><button class="v02-button" id="submit" disabled>等待合约验证</button></div>
 <p class="v02-help v02-warning">任何 Deposit（包括追加 1 wei）都会永久放弃未领取奖励。需要保留时，务必先 Claim。Withdraw 亦不自动 Claim。</p>
 <p class="v02-muted" id="wallet-id">尚未连接钱包</p>

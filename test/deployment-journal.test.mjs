@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ContractFactory, JsonRpcProvider, Wallet, getCreateAddress, keccak256 } from 'ethers';
 import { compile } from '../scripts/compile.mjs';
-import { reserveDeployment, updateDeployment, broadcastRecordedTransaction } from '../scripts/mainnet-journal.mjs';
+import { reserveDeployment, updateDeployment, broadcastRecordedTransaction } from '../scripts/deployment-journal.mjs';
 
 function journal(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ubic1-mainnet-journal-'));
@@ -64,7 +64,7 @@ test('successful broadcast persists pending status, never discarding identifying
 
 test('exclusive reservation blocks two concurrent OS processes from deploying', async t => {
   const file = journal(t);
-  const worker = fileURLToPath(new URL('./fixtures/mainnet-reserve-worker.mjs', import.meta.url));
+  const worker = fileURLToPath(new URL('./fixtures/deployment-reserve-worker.mjs', import.meta.url));
   function run() {
     return new Promise((resolve, reject) => {
       const p = spawn(process.execPath, [worker, file], { stdio: 'ignore' });

@@ -210,8 +210,19 @@ async function connect() {
     const accounts=await wallet.request({method:'eth_requestAccounts'});
     const chain=await wallet.request({method:'eth_chainId'});
     account=accounts[0]??null;walletChain=BigInt(chain);accountVersion++;operationId++;
-    wallet.on?.('accountsChanged', accountsChanged);
-    wallet.on?.('chainChanged',chainChanged);
+    // Listening is optional under EIP-1193. Some injected wallets expose a
+    // Proxy whose read of `on` violates JS invariants (non-configurable
+    // property); do not let a broken optional event API block connection.
+    try {
+      const subscribe=wallet.on;
+      if(typeof subscribe==='function') {
+        subscribe.call(wallet,'accountsChanged',accountsChanged);
+        subscribe.call(wallet,'chainChanged',chainChanged);
+      }
+    }catch {
+      // Signing remains guarded by explicit account/chain checks, including
+      // after getSigner(); no need to maintain a replacement event system.
+    }
     render();await refresh();
   }catch(e){showTx('Failed',errorDetail(e));}
 }
