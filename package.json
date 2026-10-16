@@ -9,6 +9,9 @@
     "build:v02": "node scripts/compile-v02.mjs",
     "test:v02": "node --test test/ubic-v02.test.mjs",
     "deploy:sepolia": "node --env-file-if-exists=.env scripts/deploy-sepolia.mjs",
+    "deploy:v02:sepolia": "node --env-file-if-exists=.env.sepolia-v02 scripts/deploy-v02-sepolia.mjs",
+    "verify:v02:sepolia": "node --env-file-if-exists=.env.sepolia-v02 scripts/verify-v02-sepolia.mjs",
+    "test:deploy:v02": "node --test test/v02-sepolia-deployment.test.mjs",
     "deploy:mainnet": "node --env-file=.env.mainnet scripts/deploy-mainnet.mjs",
     "test:sepolia": "node --env-file-if-exists=.env scripts/test-sepolia.mjs"
   },
