@@ -1,0 +1,13 @@
+{
+  "chainId": 11155111,
+  "address": "0xef04ABbc1EEf957715895c234f5dEef7d2452AE1",
+  "deployer": "0x806918b917a89956B8AF1a2897940c475973E2d3",
+  "transactionHash": "0x28167a2adc1f77d967acc89dfafb2ed4f5621a6b10f7c24d39d8ab4d6371a5ab",
+  "status": "confirmed",
+  "compiler": "0.8.37",
+  "evmVersion": "shanghai",
+  "optimizerRuns": 200,
+  "blockNumber": 11920524,
+  "genesisTime": "1792068408",
+  "runtimeHash": "0x1eaa64a36b75ec045d2c1fc6375784aae427340bb6299dd5db34a87a39deb407"
+}
