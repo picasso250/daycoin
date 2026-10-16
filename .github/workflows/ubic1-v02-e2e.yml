@@ -28,7 +28,9 @@ jobs:
           node-version: '22'
 
       - name: Install contract testing dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        # Existing Windows lockfile misclassifies macOS-only fsevents; preserve
+        # locked versions while bypassing npm's platform rejection in isolated CI.
+        run: npm ci --force --ignore-scripts --no-audit --no-fund
 
       - name: Install independent v0.2 UI testing dependencies
         run: npm ci --prefix sites/ubic1-v02 --ignore-scripts --no-audit --no-fund
