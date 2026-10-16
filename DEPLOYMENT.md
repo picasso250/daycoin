@@ -2,6 +2,8 @@
 
 合约：`contracts/UBIC1.sol`，名称 / Symbol / Solidity 合约名均为 `UBIC1`。Solidity 固定 **0.8.37**，OpenZeppelin **5.4.0**，优化 runs=200，EVM 目标 Shanghai。经济规则、24 小时和千日纪元不因测试而缩短。
 
+**现有部署**：Sepolia V2 已部署到 [`0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715`](https://sepolia.etherscan.io/address/0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715)，部署区块 `11925819`。完整记录见 `deployments/sepolia.json`；更早的不可升级合约仅保存在 `deployments/sepolia-v1.json` 作为历史记录。部署脚本检测到已有记录会拒绝再次部署；**不要为了更新网页而重新部署合约**。当前前端已经按 V2 的退款不铸币规则配置；Cloudflare 由维护者手动发布。
+
 ## 需要准备
 
 1. Node.js **22.9+**（或更高的受支持版本）和 npm，支持 `--env-file-if-exists`。

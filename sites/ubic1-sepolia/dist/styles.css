@@ -44,4 +44,4 @@
 @media(max-width:820px){.site-nav{gap:14px}.stats-kpis{grid-template-columns:repeat(2,1fr)}.chart-grid{grid-template-columns:1fr}.stats-heading{align-items:start;flex-direction:column}}
 @media(max-width:700px){nav.site-nav>a{display:inline}.site-nav .nav-contract{display:none}.site-nav{gap:12px}.site-nav a{font-size:12px}.home-links,.formula-grid{grid-template-columns:1fr}.stats-heading{padding:34px 0}.stats-kpis{grid-template-columns:repeat(2,1fr)}.stats-kpi{padding:17px 12px}.stats-kpi strong{font-size:23px}.chart-switch{margin-top:15px}.stats-charts>.section-heading{align-items:start;flex-direction:column}}
 /* Keep navigation and wallet controls reachable on narrow screens. */
-@media(max-width:700px){header:has(.site-nav){height:auto;min-height:90px;flex-wrap:wrap;gap:18px;padding:20px 0}.site-nav{flex-wrap:wrap;row-gap:12px;max-width:100%}}
+@media(max-width:700px){header:has(.site-nav){height:auto;min-height:90px;flex-wrap:wrap;gap:18px;padding:20px 0}.site-nav{flex-wrap:wrap;row-gap:12px;max-width:100%}.site-nav .nav-contract{display:inline}}

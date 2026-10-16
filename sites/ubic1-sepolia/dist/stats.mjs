@@ -2,9 +2,9 @@ import { JsonRpcProvider, FetchRequest, Interface, Contract, formatEther, format
 import {createLedger, applyLedgerEvent, monetarySnapshot, makeSamples, formatAnnualBps, DAY_SECONDS} from './stats-model.mjs';
 import {scanLogs} from './stats-scan.mjs';
 
-const ADDRESS='0xef04ABbc1EEf957715895c234f5dEef7d2452AE1';
-const HASH='0x1eaa64a36b75ec045d2c1fc6375784aae427340bb6299dd5db34a87a39deb407';
-const START=11920524, CHAIN=11155111n;
+const ADDRESS='0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715';
+const HASH='0x1c8b1489ffa0d74d93f90db305434f6b640edd579fa4af5d244eff987aeee6e6';
+const START=11925819, CHAIN=11155111n;
 const ABI=['function totalSupply() view returns(uint256)','function genesisTime() view returns(uint256)','event Deposited(address indexed account,uint256 amount)','event ToppedUp(address indexed account,uint256 amount)','event Withdrawn(address indexed account,uint256 amount)','event Claimed(address indexed account,uint256 reward)','event Transfer(address indexed from,address indexed to,uint256 value)'];
 const request=new FetchRequest('https://ethereum-sepolia-rpc.publicnode.com'); request.timeout=15000;
 const rpc=new JsonRpcProvider(request,undefined,{batchMaxCount:1,cacheTimeout:-1});

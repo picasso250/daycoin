@@ -2,9 +2,9 @@ import { BrowserProvider, Contract, FetchRequest, Interface, JsonRpcProvider, fo
 import { positionState, countdown, emptyIndex, applyEvent, compactEth, withdrawGuidance, withdrawalConsentSnapshot, withdrawalNeedsNewConsent } from './model.mjs';
 import { prepareTransaction, rpcErrorDetail, isInsufficientFunds } from './transaction.mjs';
 
-const ADDRESS = '0xef04ABbc1EEf957715895c234f5dEef7d2452AE1';
-const HASH = '0x1eaa64a36b75ec045d2c1fc6375784aae427340bb6299dd5db34a87a39deb407';
-const FIRST_BLOCK = 11920524, CHAIN = 11155111n, EXPLORER = 'https://sepolia.etherscan.io';
+const ADDRESS = '0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715';
+const HASH = '0x1c8b1489ffa0d74d93f90db305434f6b640edd579fa4af5d244eff987aeee6e6';
+const FIRST_BLOCK = 11925819, CHAIN = 11155111n, EXPLORER = 'https://sepolia.etherscan.io';
 const ABI = [
  'function currentEpoch() view returns(uint256)', 'function requiredDeposit() view returns(uint256)',
  'function genesisTime() view returns(uint256)', 'function totalSupply() view returns(uint256)',
