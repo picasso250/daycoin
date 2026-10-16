@@ -66,10 +66,13 @@ try {
     } else {
       if (original.depositedAt === 0n) throw new Error('No active position.');
       if (original.principal < minimum) console.log('Underfunded: pending rewards will be forfeited; principal is refunded.');
+      const beforeSupply = await token.totalSupply();
       const receipt = await wait(token.withdraw(), 'Withdraw all principal');
       assert.equal(events(receipt, 'Withdrawn')[0].args.amount, original.principal);
+      assert.equal(events(receipt, 'Claimed').length, 0);
+      assert.equal(await token.totalSupply(), beforeSupply);
       assert.equal((await token.positions(signer.address)).depositedAt, 0n);
-      console.log('Withdrawal passed. Position closed.');
+      console.log('Withdrawal passed. Position closed; no minting occurred.');
     }
   }
 } catch (error) { console.error(safeError(error)); process.exitCode = 1; }
