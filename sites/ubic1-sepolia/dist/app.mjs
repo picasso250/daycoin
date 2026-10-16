@@ -85,7 +85,7 @@ function render() {
   deposit:['让第一天开始。',`新仓位按当前门槛存入${data ? ' ' + eth(data.required) + ' ETH' : '测试 ETH'}。一个地址同时最多一个仓位。`],
   topUp:['补足资格，保留时间。','补仓不重置计时，不增加每日发行速度。可以按缺口补足，也可以提前补足未来门槛。'],
   claim:['领取收入，继续参与。','领取所有未领取的整天奖励。本金保持质押，不足一天的进度保留。'],
-  withdraw:['你的本金，随时取回。',s.gap > 0n ? `当前未达门槛。退出将放弃 ${personal ? coin(personal.pending) : '—'} UBIC1 未铸造资格，但退回全部 ${personal ? eth(personal.position.principal) : '—'} ETH 本金。` : '结算剩余整天奖励，退回全部实际本金并关闭仓位。不足一天的时间将在退出后作废。']
+  withdraw:['你的本金，随时取回。',`只退回全部 ${personal ? eth(personal.position.principal) : '—'} ETH 本金，并关闭仓位。将放弃全部 ${personal ? coin(personal.pending) : '—'} UBIC1 未领取资格（包括成熟奖励）。如需保留奖励，请先 Claim。`]
  };
  text('action-title',copy[action][0]); text('action-description',copy[action][1]);
  const amountAction = action === 'deposit' || action === 'topUp';
@@ -207,7 +207,7 @@ function showTransaction(status,title,detail,hash){
  }
 }
 async function confirmWithdrawal(p,s){
- const detail=`将退回本金 ${eth(p.position.principal)} ETH（gas 另付）。\n`+(s.gap>0n?`当前未达质押门槛。退出将永久放弃 ${coin(p.pending)} UBIC1 的未铸造领取资格，已持有代币不受影响。`:`同时结算约 ${coin(p.pending)} UBIC1 的整天奖励。若交易执行前跨入新纪元且本金不足，未领取奖励将被放弃；最终以执行时状态为准。`);
+ const detail=`将退回本金 ${eth(p.position.principal)} ETH（gas 另付）。\n`+`退出不会铸造代币，所有尚未领取的 ${coin(p.pending)} UBIC1 资格（包括已成熟奖励）将永久放弃。若需要奖励，请先取消并 Claim。已持有代币不受影响。`;
  text('withdraw-detail',detail);const dialog=$('withdraw-dialog');dialog.returnValue='cancel';dialog.showModal();
  return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true}));
 }
@@ -228,7 +228,7 @@ async function transact(){
   const accounts=await wallet.request({method:'eth_accounts'});
   if(BigInt(await wallet.request({method:'eth_chainId'}))!==CHAIN||accounts[0]?.toLowerCase()!==owner.toLowerCase()||version!==accountVersion)throw Error('钱包账户或网络已变化，交易未发送。');
   if(!fresh())throw Error('链上数据已失效，请重试。');
-  if(selected==='withdraw'&&state().gap>0n&&s.gap===0n){if(!await confirmWithdrawal(personal,state()))return;}
+  if(selected==='withdraw'&&personal.pending>s.pending){if(!await confirmWithdrawal(personal,state()))return;}
   browser=new BrowserProvider(wallet,'any');const signer=await browser.getSigner(owner), contract=new Contract(ADDRESS,ABI,signer);
   let value=0n;if(selected==='deposit')value=data.required;
   if(selected==='topUp'){value=parseEther($('amount').value);if(value<=0n)throw Error('补仓金额必须大于零。');}
