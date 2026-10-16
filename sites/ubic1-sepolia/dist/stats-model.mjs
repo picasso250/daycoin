@@ -76,6 +76,8 @@ export function makeSamples(events, genesis, until, stepSeconds, limit = 365) {
 }
 export function formatAnnualBps(bps) {
   if (bps == null) return '—';
-  const whole = bps / 100n, fractional = String(bps % 100n).padStart(2, '0');
-  return whole.toLocaleString('en-US') + '.' + fractional + '%';
+  const sign = bps < 0n ? '-' : '';
+  const value = bps < 0n ? -bps : bps;
+  const whole = value / 100n, fractional = String(value % 100n).padStart(2, '0');
+  return sign + whole.toLocaleString('en-US') + '.' + fractional + '%';
 }
