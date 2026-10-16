@@ -1,0 +1,1 @@
+{"name":"ubic1-sepolia-ui","private":true,"type":"module","scripts":{"test":"node --test test/*.test.mjs","preview":"node preview.mjs"}}
