@@ -22,7 +22,7 @@ test('mint, burn and withdrawal reconcile and do not include unclaimed rewards',
   assert.equal(s.supply,9999n);
   assert.equal(s.minted,10000n);
   assert.equal(s.burned,1n);
-  assert.equal(formatAnnualBps(monetarySnapshot(s,DAY_SECONDS,0n).annualBps),'36503.65%');
+  assert.equal(formatAnnualBps(monetarySnapshot(s,DAY_SECONDS,0n).annualBps),'36,503.65%');
   applyLedgerEvent(s,{name:'Withdrawn',account:'0xAa',amount:stake});
   assert.equal(s.positions.size,0);
   assert.equal(s.principal,0n);
