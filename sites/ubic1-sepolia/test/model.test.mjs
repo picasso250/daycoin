@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {positionState,countdown,emptyIndex,applyEvent,withdrawGuidance,withdrawalNeedsNewConsent} from '../dist/model.mjs';
+import {positionState,countdown,emptyIndex,applyEvent,withdrawGuidance,withdrawalConsentSnapshot,withdrawalNeedsNewConsent} from '../dist/model.mjs';
 const UNIT=10n**17n;
 test('pending entitlement alone does not make underfunded position claimable',()=>{
  const s=positionState({depositedAt:100n,claimedPeriods:0n,principal:UNIT},2n*UNIT,12000000n);
@@ -41,6 +41,28 @@ test('material changes in rewards, eligibility or principal require renewed with
  assert.equal(withdrawalNeedsNewConsent(original,{...original,pending:10000n}),true);
  assert.equal(withdrawalNeedsNewConsent(original,{...original,claimable:true}),true);
  assert.equal(withdrawalNeedsNewConsent(original,{...original,principal:200n}),true);
+});
+test('withdrawal consent remains the displayed value through both asynchronous dialogs',async()=>{
+ const required=100000000000000000n;
+ const p={pending:10000n,position:{depositedAt:100n,claimedPeriods:0n,principal:required}};
+ const snapshot=()=>withdrawalConsentSnapshot(p,positionState(p.position,required,p.pending));
+ const first= snapshot(); // First dialog shows 1 UBIC1.
+ let closeFirst;
+ const firstDialog=new Promise(resolve=>{closeFirst=resolve;});
+ p.pending=20000n; // A background refresh while the dialog is open.
+ closeFirst('confirm');
+ assert.equal(await firstDialog,'confirm');
+ assert.equal(first.pending,10000n);
+ assert.equal(withdrawalNeedsNewConsent(first,snapshot()),true);
+
+ const second=snapshot(); // Second dialog shows 2 UBIC1.
+ let closeSecond;
+ const secondDialog=new Promise(resolve=>{closeSecond=resolve;});
+ p.pending=30000n; // Refresh before second confirmation.
+ closeSecond('confirm');
+ assert.equal(await secondDialog,'confirm');
+ assert.equal(second.pending,20000n);
+ assert.equal(withdrawalNeedsNewConsent(second,snapshot()),true);
 });
 test('countdown is bounded at zero and supports epochs',()=>{
  assert.equal(countdown(-1),'00:00:00');assert.equal(countdown(86401),'1d 00:00:01');

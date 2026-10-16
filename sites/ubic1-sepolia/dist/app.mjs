@@ -1,5 +1,5 @@
 import { BrowserProvider, Contract, FetchRequest, Interface, JsonRpcProvider, formatEther, formatUnits, parseEther, keccak256 } from './ethers.min.js';
-import { positionState, countdown, emptyIndex, applyEvent, compactEth, withdrawGuidance, withdrawalNeedsNewConsent } from './model.mjs';
+import { positionState, countdown, emptyIndex, applyEvent, compactEth, withdrawGuidance, withdrawalConsentSnapshot, withdrawalNeedsNewConsent } from './model.mjs';
 import { prepareTransaction, rpcErrorDetail, isInsufficientFunds } from './transaction.mjs';
 
 const ADDRESS = '0xef04ABbc1EEf957715895c234f5dEef7d2452AE1';
@@ -206,10 +206,9 @@ function showTransaction(status,title,detail,hash){
   if(!history.querySelector(`[data-hash="${hash}"]`)){const a=document.createElement('a');a.dataset.hash=hash;a.href=`${EXPLORER}/tx/${hash}`;a.target='_blank';a.rel='noopener noreferrer';a.textContent=`✓ ${title} · ${short(hash)} ↗`;a.style.display='block';a.style.marginTop='8px';history.append(a);}
  }
 }
-function withdrawalConsentSnapshot(p,s){
- return {pending:p.pending,principal:p.position.principal,claimable:s.claimable};
-}
 async function confirmWithdrawal(p,s){
+ // Consent is fixed before showModal() and before its asynchronous user wait.
+ const snapshot=withdrawalConsentSnapshot(p,s);
  const guidance=withdrawGuidance(p.position,data.required,p.pending);
  const balance=coin(p.pending);
  const heading=guidance.recommendClaim ? `你还有 ${balance} UBIC1 可以领取` : '退出仓位，取回本金';
@@ -227,7 +226,7 @@ async function confirmWithdrawal(p,s){
  const result=new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue),{once:true}));
  dialog.showModal();
  (guidance.recommendClaim ? $('withdraw-claim') : $('withdraw-cancel')).focus();
- return result;
+ return {choice:await result,snapshot};
 }
 
 async function transact(){
@@ -241,13 +240,13 @@ async function transact(){
   let s=state(), acceptedWithdrawal=null;
   if(selected==='claim'&&!s.claimable)throw Error(s.gap?'请先补足当前门槛。':'暂无完整周期奖励。');
   if(selected==='withdraw'){
-   const choice=await confirmWithdrawal(personal,s);
-   if(choice==='claim'){
+   const consent=await confirmWithdrawal(personal,s);
+   if(consent.choice==='claim'){
     if(version!==accountVersion||owner!==account)throw Error('钱包账户已变化，请重新选择操作。');
     setAction('claim');return; // No transaction or wallet signature is triggered by this choice.
    }
-   if(choice!=='confirm')return;
-   acceptedWithdrawal=withdrawalConsentSnapshot(personal,s);
+   if(consent.choice!=='confirm')return;
+   acceptedWithdrawal=consent.snapshot;
   }
   // The dialog may stay open across an epoch boundary. Refresh before signing.
   await refresh();
@@ -256,13 +255,13 @@ async function transact(){
   if(!fresh())throw Error('链上数据已失效，请重试。');
   if(selected==='withdraw'&&withdrawalNeedsNewConsent(acceptedWithdrawal,withdrawalConsentSnapshot(personal,state()))){
    // A new reward, claim eligibility or principal has changed while the dialog was open.
-   const choice=await confirmWithdrawal(personal,state());
-   if(choice==='claim'){
+   const renewed=await confirmWithdrawal(personal,state());
+   if(renewed.choice==='claim'){
     if(version!==accountVersion||owner!==account)throw Error('钱包账户已变化，请重新选择操作。');
     setAction('claim');return;
    }
-   if(choice!=='confirm')return;
-   const secondConsent=withdrawalConsentSnapshot(personal,state());
+   if(renewed.choice!=='confirm')return;
+   const secondConsent=renewed.snapshot;
    await refresh();
    const latestAccounts=await wallet.request({method:'eth_accounts'});
    if(!fresh()||version!==accountVersion||owner!==account||

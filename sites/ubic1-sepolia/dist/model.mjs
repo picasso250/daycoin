@@ -23,6 +23,16 @@ export function withdrawGuidance(position, required, pending) {
   };
 }
 
+// Capture the precise BigInt values shown when a withdrawal dialog opens.
+// A background RPC refresh must not silently redefine the user's consent.
+export function withdrawalConsentSnapshot(personal, state) {
+  return Object.freeze({
+    pending: personal.pending,
+    principal: personal.position.principal,
+    claimable: state.claimable
+  });
+}
+
 // Reconsider the user's consent if the actual forfeiture or claim option changed.
 export function withdrawalNeedsNewConsent(before, after) {
   return before.pending !== after.pending ||
