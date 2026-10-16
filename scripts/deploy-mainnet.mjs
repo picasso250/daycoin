@@ -28,7 +28,8 @@ try {
   const signer = new Wallet(key, provider);
   const previousDeployers = ['deployments/sepolia.json', 'deployments/sepolia-v1.json']
     .map(readRecord).filter(Boolean).map(record => record.deployer).filter(Boolean);
-  requireFreshDeployer(signer.address, previousDeployers);
+  const reusedDeployer = requireFreshDeployer(signer.address, previousDeployers, mode.approvedReuseAddress ?? null);
+  if (reusedDeployer) console.warn('WARNING: Reusing a recorded Sepolia deployer. Its private key may be exposed. Never use this wallet to hold staking principal.');
   if (mode.broadcast && getAddress(signer.address) !== mode.expectedDeployer)
     throw new Error('Confirmation address does not match the current mainnet signer. No transaction sent.');
 
@@ -55,7 +56,8 @@ try {
 
   if (!mode.broadcast) {
     console.log('PREFLIGHT ONLY. No transaction was signed or sent.');
-    console.log('For explicit deployment, rerun with --broadcast --confirm-deployer=' + signer.address);
+    console.log('For explicit deployment, rerun with --broadcast --confirm-deployer=' + signer.address +
+      (reusedDeployer ? ' --allow-reused-deployer=' + signer.address : ''));
   } else {
     // Exclusive single-use reservation BEFORE nonce selection and BEFORE any network broadcast.
     // A crash at any stage leaves a record, so a second run cannot blindly redeploy.

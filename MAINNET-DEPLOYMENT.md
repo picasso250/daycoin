@@ -2,12 +2,12 @@
 
 主网合约源代码：`contracts/UBIC1.sol`，**与 Sepolia V2 逻辑相同**。主网部署后不可升级，无 Owner、暂停、救援或管理员功能。真实 ETH 存入后，智能合约账户如不能接收 ETH，可能无法通过 `withdraw()` 取回；普通外部账户需要另外支付 Gas。Claim 后再 Withdraw 需要两笔交易，直接 Withdraw 会放弃所有未领取奖励，包括已成熟的部分。
 
-**部署失败**通常只损失 Gas，**部署成功后的使用风险**则可能涉及实际锁入的 ETH。部署意味着任何人都能直接调用公开地址，不存在真正的私有测试阶段。不要使用此前任何在聊天里出现过的私钥。
+**部署失败**通常只损失 Gas，**部署成功后的使用风险**则可能涉及实际锁入的 ETH。部署意味着任何人都能直接调用公开地址，不存在真正的私有测试阶段。曾经在聊天中公开过的私钥应视为不安全：即使用作仅支付 Gas 的部署钱包，余额也可能被抢走。不要用它作为存入真实 0.1 ETH 本金的测试钱包。
 
 ## 前提条件
 
 1. 先审查最新 Solidity 代码和全部测试；主网部署是一个独立的制度选择，不以 Sepolia 上无异常交易保证主网无漏洞。
-2. 在全新钱包生成 **从未公开过的私钥**；不要与 Sepolia V1/V2 部署钱包复用。
+2. **强烈建议**使用全新钱包及从未公开过的私钥。若决定复用 Sepolia V1/V2 部署钱包，可使用下述精确地址显式确认例外；应仅投入愿意损失的部署 Gas，且与持有 0.1 ETH 质押本金的主钱包彻底隔离。
 3. 配置可信任的 Ethereum Mainnet HTTPS RPC，只接受 Chain ID `1`。
 4. 在本地复制 `.env.mainnet.example` 至 `.env.mainnet`，只填入 `MAINNET_RPC_URL` 和 `MAINNET_PRIVATE_KEY`。本文件被 Git 忽略；不会读旧 `.env`。
 5. 设置 `MAINNET_MAX_DEPLOY_FEE_ETH` 作为本次部署 **Gas 上限预算**。主网实际 Gas 价格动态变化，Sepolia 价格不适用。
@@ -25,10 +25,24 @@ npm run deploy:mainnet
 
 核对输出中的 `Network: Ethereum Mainnet (chain 1)`、Deployer 地址、余额、Gas 估算与最大可能手续费。预算太低时脚本会拒绝广播，此时应等待费率下降或由本人明确修改手续费预算。
 
+### 明确允许复用 Sepolia 部署钱包（可选）
+
+默认预检仍拒绝已记录的 Sepolia 部署地址。只有显式提供 **当前签名钱包的完整地址** 才允许继续；错误的地址或未被记录的地址都会被拒绝。参数不会跳过 Chain ID 检查、Gas 预算，也不会自动广播：
+
+```powershell
+npm run deploy:mainnet -- --allow-reused-deployer=0x你的实际部署钱包地址
+```
+
+**重要**：复用钱包如曾泄露私钥，即使只支付部署 Gas，也可能被攻击者抢走余额。主网 0.1 ETH 存款实验请使用另一个未泄露私钥的独立钱包。
+
 ## 广播（必须在审查通过并明确授权后才能执行）
 
 ```powershell
+# 使用新部署钱包
 npm run deploy:mainnet -- --broadcast --confirm-deployer=0x你的主网部署钱包地址
+
+# 如果本人明确选择复用 Sepolia 部署钱包，两个参数填写同一个实际签名地址
+npm run deploy:mainnet -- --broadcast --confirm-deployer=0x你的主网部署钱包地址 --allow-reused-deployer=0x你的主网部署钱包地址
 ```
 
 ### 广播中断时的人工恢复（禁止盲目重试）
