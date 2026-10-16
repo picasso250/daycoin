@@ -76,6 +76,6 @@ npm test
 
 新合约：contracts/UBIC1V02.sol；测试：test/ubic-v02.test.mjs；构建产物：artifacts/UBIC1V02.json（gitignored）。旧版源码及部署记录不改动。
 
-**独立 Sepolia 部署与完整字节码核验流程：见 [UBIC1-V0.2-SEPOLIA.md](UBIC1-V0.2-SEPOLIA.md)。** 命令是 `npm run deploy:v02:sepolia`（默认仅预演）及 `npm run verify:v02:sepolia`（只读核验）；旧的 `deploy:sepolia` 仍指向 v0.1。
+**部署与字节码核验：见 [DEPLOY.md](DEPLOY.md)。** 统一使用 `npm run deploy -- .env.sepolia artifacts/UBIC1V02.json`（默认仅预演）、`npm run verify -- .env.sepolia artifacts/UBIC1V02.json`（只读核验）；旧的 `deploy:sepolia` 仍指向 v0.1，不可复用。
 
 部署之前仍需：独立安全审计、完整 v0.2 前端及端到端测试、测试网试运行、部署版本字节码核对、主网显式确认。真实存款风险无法完全消除。

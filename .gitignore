@@ -4,7 +4,7 @@ artifacts/
 .env.*
 !.env.example
 !.env.mainnet.example
-!.env.sepolia-v02.example
+!.env.sepolia.example
 deployments/
 .wrangler/
 .openai/

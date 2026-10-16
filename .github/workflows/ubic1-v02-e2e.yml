@@ -6,14 +6,13 @@ on:
       - 'contracts/UBIC1V02.sol'
       - 'scripts/compile.mjs'
       - 'scripts/compile-v02.mjs'
-      - 'scripts/deploy-v02-sepolia.mjs'
-      - 'scripts/verify-v02-sepolia.mjs'
-      - 'scripts/v02-sepolia-common.mjs'
-      - 'scripts/v02-sepolia-guards.mjs'
+      - 'scripts/deploy.mjs'
+      - 'scripts/verify.mjs'
+      - 'scripts/deployment-common.mjs'
       - 'scripts/mainnet-journal.mjs'
-      - 'test/v02-sepolia-deployment.test.mjs'
-      - '.env.sepolia-v02.example'
-      - 'UBIC1-V0.2-SEPOLIA.md'
+      - 'test/generic-deployment.test.mjs'
+      - '.env.sepolia.example'
+      - 'DEPLOY.md'
       - 'package.json'
       - 'package-lock.json'
       - 'test/ubic-v02.test.mjs'
@@ -24,14 +23,13 @@ on:
       - 'contracts/UBIC1V02.sol'
       - 'scripts/compile.mjs'
       - 'scripts/compile-v02.mjs'
-      - 'scripts/deploy-v02-sepolia.mjs'
-      - 'scripts/verify-v02-sepolia.mjs'
-      - 'scripts/v02-sepolia-common.mjs'
-      - 'scripts/v02-sepolia-guards.mjs'
+      - 'scripts/deploy.mjs'
+      - 'scripts/verify.mjs'
+      - 'scripts/deployment-common.mjs'
       - 'scripts/mainnet-journal.mjs'
-      - 'test/v02-sepolia-deployment.test.mjs'
-      - '.env.sepolia-v02.example'
-      - 'UBIC1-V0.2-SEPOLIA.md'
+      - 'test/generic-deployment.test.mjs'
+      - '.env.sepolia.example'
+      - 'DEPLOY.md'
       - 'package.json'
       - 'package-lock.json'
       - 'test/ubic-v02.test.mjs'
@@ -74,8 +72,8 @@ jobs:
       - name: Run v0.2 contract tests
         run: npm run test:v02
 
-      - name: Verify v0.2 isolated Sepolia deployment and exact runtime against simulated EVM
-        run: npm run test:deploy:v02
+      - name: Verify generic artifact-based deployment and runtime on simulated EVM
+        run: npm run test:deploy
 
       - name: Run v0.2 UI tests and browser E2E
         run: npm --prefix sites/ubic1-v02 test
