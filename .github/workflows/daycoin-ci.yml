@@ -1,0 +1,59 @@
+name: DayCoin DC1 checks
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+      - 'scripts/**'
+      - 'test/**'
+      - 'sites/daycoin-mainnet/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/daycoin-ci.yml'
+      - 'wrangler.mainnet.jsonc'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Contract and deployment tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install root dependencies
+        run: npm ci --force --ignore-scripts --no-audit --no-fund
+      - name: Rebuild DC1 and compare immutable creation hash
+        run: |
+          npm run build
+          node --input-type=module -e 'import fs from "node:fs"; import {keccak256} from "ethers"; const a=JSON.parse(fs.readFileSync("artifacts/DayCoinV1.json")); if(keccak256("0x"+a.evm.bytecode.object)!=="0xd3888c5525657300e00c91245fcc9fdfde4aebfced36a92639522499362532f6") throw Error("DC1 creation bytecode changed");'
+      - name: Unit and deployment tests (isolated EVM, no real transactions)
+        run: npm test
+  website:
+    name: Mainnet website and browser tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install website dependencies
+        run: npm ci --prefix sites/daycoin-mainnet --ignore-scripts --no-audit --no-fund
+      - name: Install Chromium browser
+        run: npx --prefix sites/daycoin-mainnet playwright install --with-deps chromium
+      - name: Website unit tests
+        run: npm --prefix sites/daycoin-mainnet test
+      - name: Browser E2E against a local preview and mocked chain
+        run: |
+          PORT=5175 node sites/daycoin-mainnet/preview.mjs >/tmp/daycoin-preview.log 2>&1 &
+          server=$!
+          trap 'kill "$server" || true' EXIT
+          sleep 2
+          PREVIEW_URL=http://127.0.0.1:5175 npm --prefix sites/daycoin-mainnet run test:browser

@@ -1,18 +1,15 @@
 {
-  "name": "ubic",
+  "name": "daycoin",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/compile.mjs",
     "test": "node --test test/*.test.mjs",
-    "build": "node scripts/compile-dc1.mjs",
-    "build:v02": "node scripts/compile-v02.mjs",
-    "test:v02": "node --test test/ubic-v02.test.mjs",
-    "deploy": "node scripts/deploy.mjs",
-    "verify": "node scripts/verify.mjs",
+    "test:dc1": "node --test test/dc1.test.mjs",
     "test:deploy": "node --test test/generic-deployment.test.mjs",
-    "build:dc1": "node scripts/compile-dc1.mjs",
-    "test:dc1": "node --test test/dc1.test.mjs"
+    "deploy": "node scripts/deploy.mjs",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.4.0"

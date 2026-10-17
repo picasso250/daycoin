@@ -100,7 +100,7 @@ test('offline-signed contract creation works against isolated simulated chain 1'
   const signer = new Wallet(Object.values(server.provider.getInitialAccounts())[0].secretKey, provider);
   const file = journal(t);
   reserveDeployment(file, {chainId:1, deployer:signer.address});
-  const built = compile()['contracts/UBIC1.sol'].UBIC1;
+  const built = compile()['contracts/DayCoinV1.sol'].DayCoinV1;
   const factory = new ContractFactory(built.abi, built.evm.bytecode.object, signer);
   const request = await factory.getDeployTransaction();
   const nonce = await provider.getTransactionCount(signer.address, 'pending');

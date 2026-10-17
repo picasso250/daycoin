@@ -77,7 +77,7 @@ test('deposit amount defaults to the live on-chain threshold and stays editable'
   try {
     assert.equal(await page.locator('.test-strip').count(), 0);
     assert.equal(await page.locator('header').evaluate(el => el.getBoundingClientRect().top), 0);
-    assert.match(await page.locator('#panel-deposit .action-copy > p').first().textContent(), /每天累计 1 枚 UBIC1（按秒计算，需手动领取）/);
+    assert.match(await page.locator('#panel-deposit .action-copy > p').first().textContent(), /每天累计 1 枚 DC1（按秒计算，需手动领取）/);
     assert.match(await page.locator('#panel-deposit .action-copy > p').first().textContent(), /未达标不会累计；多存也不会更快/);
     await page.waitForFunction(() => document.querySelector('#amount-help').textContent.includes('0.2 ETH'));
     assert.equal(await page.locator('#amount-help').textContent(), '当前发行门槛：0.2 ETH');
@@ -125,7 +125,7 @@ test('desktop/mobile layout, fixed contract, strict Proxy wallet and historical 
     assert.equal(await page.locator('#contract').textContent(), ADDRESS);
     assert.equal(await page.locator('.status-pill').textContent(), 'ETHEREUM MAINNET');
     assert.equal(await page.locator('meta[name="description"]').getAttribute('content').then(s => s.includes('v0.2')), false);
-    assert.equal(await page.locator('.intro p').textContent().then(s => s.includes('UBI 是理想，UBIC1 是我们的第一次尝试。')), true);
+    assert.equal(await page.locator('.intro p').textContent().then(s => s.includes('UBI 是远景，DC1 是从今天开始的实验。')), true);
     assert.equal(await page.locator('.intro p').textContent().then(s => s.includes('没有主人，只有规则。自由加入，自由离开。')), true);
     assert.equal(await page.locator('.footer-network').getAttribute('href'), `https://etherscan.io/address/${ADDRESS}`);
     await mkdir(new URL('../test-output/', import.meta.url), { recursive: true });

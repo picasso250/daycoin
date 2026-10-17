@@ -157,10 +157,10 @@ async function connectWallet(selected) {
   loading = false; await refresh();
 }
 function confirmOperation(kind, value, snapshot) {
-  $('confirm-title').textContent = { deposit: '存入ETH', claim: '领取 UBIC1', withdraw: '取回全部本金' }[kind];
+  $('confirm-title').textContent = { deposit: '存入ETH', claim: '领取 DC1', withdraw: '取回全部本金' }[kind];
   $('confirm-account').textContent = identity.account;
-  $('confirm-body').textContent = kind === 'deposit' ? `本次存入 ${amount(value)} ETH。` : kind === 'withdraw' ? `将取回全部记录本金：${amount(snapshot.principal)} ETH。` : `当前可领取 ${amount(snapshot.pending)} UBIC1；实际奖励以执行时的链上结果为准。`;
-  $('confirm-warning').textContent = kind === 'deposit' ? `未领取奖励和计时将永久归零。目前待领 ${amount(snapshot.pending)} UBIC1，执行前新增的奖励也会作废。若要保留，请取消并先 Claim。` : kind === 'withdraw' ? `所有未领取奖励将作废，目前为 ${amount(snapshot.pending)} UBIC1。若要保留，请取消并先 Claim。` : '领取奖励不会减少本金。';
+  $('confirm-body').textContent = kind === 'deposit' ? `本次存入 ${amount(value)} ETH。` : kind === 'withdraw' ? `将取回全部记录本金：${amount(snapshot.principal)} ETH。` : `当前可领取 ${amount(snapshot.pending)} DC1；实际奖励以执行时的链上结果为准。`;
+  $('confirm-warning').textContent = kind === 'deposit' ? `未领取奖励和计时将永久归零。目前待领 ${amount(snapshot.pending)} DC1，执行前新增的奖励也会作废。若要保留，请取消并先 Claim。` : kind === 'withdraw' ? `所有未领取奖励将作废，目前为 ${amount(snapshot.pending)} DC1。若要保留，请取消并先 Claim。` : '领取奖励不会减少本金。';
   const dialog = $('confirmation'); dialog.returnValue = 'cancel'; dialog.showModal();
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true }));
 }
@@ -179,7 +179,7 @@ async function transact(kind) {
         status('交易已提交，正在等待 Mainnet 回执…');
       });
     // Optional same-origin coordination, without persistent transaction records.
-    const operation = navigator.locks ? navigator.locks.request(`ubic1-mainnet:${expected.account}`, { ifAvailable: true }, lock => {
+    const operation = navigator.locks ? navigator.locks.request(`daycoin-mainnet:${expected.account}`, { ifAvailable: true }, lock => {
       if (!lock) throw Error('此账户在另一个标签页有操作，请先完成该操作。');
       const result = run(); render(); return result;
     }) : run();

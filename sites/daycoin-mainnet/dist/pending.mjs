@@ -1,5 +1,5 @@
 // Presentation-only projection: the on-chain pending() snapshot remains the base.
-// Every eligible second adds 1/86400 UBIC1; accrual ends at the last
+// Every eligible second adds 1/86400 DC1; accrual ends at the last
 // epoch covered by the refundable principal. No RPC calls or state writes.
 const TOKEN_WEI = 10n ** 18n;
 const DEPOSIT_STEP = 10n ** 17n;

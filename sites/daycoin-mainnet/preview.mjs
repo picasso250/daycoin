@@ -14,4 +14,4 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': `${mime[extname(file)] || 'application/octet-stream'}; charset=utf-8`, 'Cache-Control': 'no-store' });
     res.end(content);
   } catch { res.writeHead(404); res.end('Not found'); }
-}).listen(5173, '127.0.0.1', () => console.log('Local: http://127.0.0.1:5173'));
+}).listen(Number(process.env.PORT || 5174), '127.0.0.1', () => console.log('Local: http://127.0.0.1:' + (process.env.PORT || 5174)));

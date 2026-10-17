@@ -1,11 +1,11 @@
 {
-  "name": "ubic1-mainnet",
+  "name": "daycoin-mainnet",
   "account_id": "7cd361e713a3e8c115f613ec88a5707f",
   "compatibility_date": "2026-10-16",
   "workers_dev": true,
   "preview_urls": false,
-  "routes": [{ "pattern": "ubi.io99.xyz", "custom_domain": true }],
+  "routes": [{ "pattern": "daycoin.io99.xyz", "custom_domain": true }],
   "assets": {
-    "directory": "./sites/ubic1-mainnet/dist"
+    "directory": "./sites/daycoin-mainnet/dist"
   }
 }

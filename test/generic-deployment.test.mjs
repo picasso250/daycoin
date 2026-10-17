@@ -28,10 +28,10 @@ test('generic deployment configuration checks chain and rejects invalid artifact
   assert.throws(()=>readConfig(env,{requireKey:false}),/HTTPS/);
 });
 
-test('generic artifact creation bytes and runtime immutables match v0.2 build',()=>{
-  const built=compile({'contracts/UBIC1V02.sol':{
-    content:fs.readFileSync('contracts/UBIC1V02.sol','utf8')
-  }})['contracts/UBIC1V02.sol'].UBIC1V02;
+test('generic artifact creation bytes and runtime immutables match DC1 build',()=>{
+  const built=compile({'contracts/DayCoinV1.sol':{
+    content:fs.readFileSync('contracts/DayCoinV1.sol','utf8')
+  }})['contracts/DayCoinV1.sol'].DayCoinV1;
   const refs=Object.values(built.evm.deployedBytecode.immutableReferences);
   assert.equal(refs.length,1);
   const runtime=built.evm.deployedBytecode.object;
@@ -62,10 +62,10 @@ test('generic deploy and verify use exactly env file and artifact, local Sepolia
   }
   fs.symlinkSync(path.resolve('node_modules'),path.join(dir,'node_modules'),'junction');
   fs.mkdirSync(path.join(dir,'artifacts'));
-  const built=compile({'contracts/UBIC1V02.sol':{
-    content:fs.readFileSync('contracts/UBIC1V02.sol','utf8')
-  }})['contracts/UBIC1V02.sol'].UBIC1V02;
-  const art='artifacts/UBIC1V02.json';
+  const built=compile({'contracts/DayCoinV1.sol':{
+    content:fs.readFileSync('contracts/DayCoinV1.sol','utf8')
+  }})['contracts/DayCoinV1.sol'].DayCoinV1;
+  const art='artifacts/DayCoinV1.json';
   fs.writeFileSync(path.join(dir,art),JSON.stringify(built));
   const key=Object.values(server.provider.getInitialAccounts())[0].secretKey;
   const envFile='.env.sepolia';
@@ -100,7 +100,7 @@ test('generic deploy and verify use exactly env file and artifact, local Sepolia
   assert.equal(record.chainId,11155111);
   assert.equal(record.creationHash,creationHash(built));
   assert.equal((await verifyDeployment(provider,built,record)).runtimeHash,record.runtimeHash);
-  // v0.2-specific properties stay in test, not in reusable deployment code.
+  // DC1-specific properties stay in test, not in reusable deployment code.
   const contract=new Contract(record.address,built.abi,provider);
   assert.equal(await contract.decimals(),18n);
   assert.equal(await contract.totalSupply(),0n);
@@ -127,11 +127,11 @@ test('generic deploy refuses wrong chain before any broadcast', {timeout:40000},
   for(const name of ['deploy.mjs','deployment-common.mjs','deployment-journal.mjs'])fs.copyFileSync(path.join('scripts',name),path.join(dir,'scripts',name));
   fs.symlinkSync(path.resolve('node_modules'),path.join(dir,'node_modules'),'junction');
   fs.mkdirSync(path.join(dir,'artifacts'));
-  const built=compile({'contracts/UBIC1V02.sol':{content:fs.readFileSync('contracts/UBIC1V02.sol','utf8')}})['contracts/UBIC1V02.sol'].UBIC1V02;
-  fs.writeFileSync(path.join(dir,'artifacts/UBIC1V02.json'),JSON.stringify(built));
+  const built=compile({'contracts/DayCoinV1.sol':{content:fs.readFileSync('contracts/DayCoinV1.sol','utf8')}})['contracts/DayCoinV1.sol'].DayCoinV1;
+  fs.writeFileSync(path.join(dir,'artifacts/DayCoinV1.json'),JSON.stringify(built));
   const key=Object.values(server.provider.getInitialAccounts())[0].secretKey;
   fs.writeFileSync(path.join(dir,'.env.sepolia'),`CHAIN_ID=11155111\nRPC_URL=${url}\nPRIVATE_KEY=${key}\n`);
-  const p=spawn(process.execPath,[path.join(dir,'scripts/deploy.mjs'),'.env.sepolia','artifacts/UBIC1V02.json','--broadcast'],{cwd:dir,windowsHide:true});
+  const p=spawn(process.execPath,[path.join(dir,'scripts/deploy.mjs'),'.env.sepolia','artifacts/DayCoinV1.json','--broadcast'],{cwd:dir,windowsHide:true});
   let result='';for await(const x of p.stdout)result+=x;
   let errors='';for await(const x of p.stderr)errors+=x;
   const exit=await new Promise(resolve=>p.once('close',resolve));

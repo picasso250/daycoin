@@ -48,6 +48,11 @@ function fixture(options = {}) {
   return { wallet, transactions, run, sent, state, events, read, calls };
 }
 test('fixture is the exact fixed deployed runtime', () => assert.equal(keccak256(code), RUNTIME_HASH));
+test('mainnet constants are independently pinned to the task parameters', () => {
+  assert.equal(CHAIN, '0x1');
+  assert.equal(ADDRESS, '0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715');
+  assert.equal(RUNTIME_HASH, '0xfdde03bc7708ba27ee8fae35e8c643e7bff09d1754dbdf173514417d33109c2c');
+});
 test('ETH input uses exact wei, rejects zero, exponent, negatives and >18 decimals', () => {
   assert.equal(depositValue('0.000000000000000001'), 1n);
   assert.equal(depositValue('0.1'), 10n ** 17n);
@@ -70,8 +75,8 @@ test('withdraw is parameterless and sends zero ETH, even below reward threshold'
   assert.equal(f.sent[0].value, '0x0'); assert.equal(f.sent[0].data, abi.encodeFunctionData('withdraw'));
 });
 for (const [label, options, pattern] of [
-  ['wrong wallet chain', { chain: '0x1' }, /Sepolia/],
-  ['wrong data chain', { rpcChain: '0x1' }, /Sepolia/],
+  ['wrong wallet chain', { chain: '0xaa36a7' }, /Mainnet/],
+  ['wrong data chain', { rpcChain: '0xaa36a7' }, /Mainnet/],
   ['runtime mismatch', { code: '0x' }, /Hash/],
   ['wallet runtime mismatch', { walletCode: '0x00' }, /Hash/],
   ['stale block', { block: { ...block(), timestamp: '0x1' } }, /过旧/],

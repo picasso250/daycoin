@@ -7,3 +7,5 @@ deployments/
 .wrangler/
 .openai/
 *.tar.gz
+
+**/test-output/

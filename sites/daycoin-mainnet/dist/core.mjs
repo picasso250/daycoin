@@ -1,9 +1,9 @@
 import { Interface, keccak256, parseEther, formatEther } from './ethers.min.js';
 
-export const CHAIN = '0xaa36a7';
-export const ADDRESS = '0x407892d5606b0FB91D77C62aC306566E01963674';
-export const RUNTIME_HASH = '0x2c4e7b4318fa60fc3bf7b1560997d350585a8d474c82aa8def4818e91effe6db';
-export const RPC = 'https://ethereum-sepolia-rpc.publicnode.com';
+export const CHAIN = '0x1';
+export const ADDRESS = '0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715';
+export const RUNTIME_HASH = '0xfdde03bc7708ba27ee8fae35e8c643e7bff09d1754dbdf173514417d33109c2c';
+export const RPC = 'https://ethereum-rpc.publicnode.com';
 export const abi = new Interface([
   'function positions(address) view returns (uint64 cursor,uint256 principal)',
   'function pending(address) view returns (uint256)',
@@ -24,9 +24,9 @@ export async function rpc(method, params = []) {
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) throw Error('Sepolia 数据服务不可用，请稍后刷新。');
+  if (!response.ok) throw Error('Mainnet 数据服务不可用，请稍后刷新。');
   const data = await response.json();
-  if (data.error || !Object.hasOwn(data, 'result')) throw Error('Sepolia 数据读取失败，请稍后刷新。');
+  if (data.error || !Object.hasOwn(data, 'result')) throw Error('Mainnet 数据读取失败，请稍后刷新。');
   return data.result;
 }
 export function checkBlock(block, now = Date.now()) {
@@ -36,7 +36,7 @@ export function checkBlock(block, now = Date.now()) {
 }
 export async function verifiedBlock(read = rpc) {
   const [chain, block] = await Promise.all([read('eth_chainId'), read('eth_getBlockByNumber', ['latest', false])]);
-  if (BigInt(chain) !== BigInt(CHAIN)) throw Error('数据服务不是 Ethereum Sepolia。');
+  if (BigInt(chain) !== BigInt(CHAIN)) throw Error('数据服务不是 Ethereum Mainnet。');
   checkBlock(block);
   const code = await read('eth_getCode', [ADDRESS, block.number]);
   if (keccak256(code) !== RUNTIME_HASH) throw Error('合约 Runtime Hash 不匹配，已阻止操作。');
@@ -74,7 +74,7 @@ export class Wallet {
     const revision = this.revision;
     const [chain, accounts] = await Promise.all([this.request('eth_chainId'), this.request('eth_accounts')]);
     if (revision !== this.revision) throw Error('钱包已变化，请重新操作。');
-    if (BigInt(chain) !== BigInt(CHAIN)) throw Error('请在钱包中切换到 Ethereum Sepolia（11155111）。');
+    if (BigInt(chain) !== BigInt(CHAIN)) throw Error('请在钱包中切换到 Ethereum Mainnet（1）。');
     if (!/^0x[\da-f]{40}$/i.test(accounts?.[0] || '')) throw Error('请先连接钱包账户。');
     return { account: accounts[0].toLowerCase(), revision };
   }
@@ -142,7 +142,7 @@ export class Transactions {
     } catch (error) {
       if (submitted) {
         this.uncertain = true;
-        throw Error('交易结果未知，本页已停止后续交易。请在钱包与 Sepolia 浏览器核对；刷新不会取消已提交交易，也不代表交易失败。');
+        throw Error('交易结果未知，本页已停止后续交易。请在钱包与 Mainnet 浏览器核对；刷新不会取消已提交交易，也不代表交易失败。');
       }
       if (error?.code === 4001) throw Error('已取消钱包请求。');
       throw error;

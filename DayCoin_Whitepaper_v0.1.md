@@ -69,7 +69,7 @@ J(t)=\frac{(\sum_i x_i)^2}{N\sum_i x_i^2}.
 
 ## 3. DC1 正式机制与部署边界
 
-DC1 正式源码为 [`contracts/DayCoinV1.sol`](contracts/DayCoinV1.sol)。历史 `contracts/UBIC1V02.sol` 与 `UBIC1-V0.2.md` 保留为设计参考；经济及资金操作规则相同，但旧版代码与已部署 DC1 **属于不同链上合约**。
+DC1 正式源码为 [`contracts/DayCoinV1.sol`](contracts/DayCoinV1.sol)。历史 `contracts/UBIC1V02.sol` 与 `UBIC1-V0.2.md` 在 Git 修订 b8d6fb3 中保留为设计参考；经济及资金操作规则相同，但旧版代码与已部署 DC1 **属于不同链上合约**。
 
 DC1 合约是 ERC-20 Burnable，18 位小数，无 Owner、无管理员任意增发、暂停、升级或救援能力；存入的是 ETH 本金，存入者可随时取回。
 
@@ -299,10 +299,10 @@ DC1 不自动升级为 DC2；版本之间不存在强制迁移、价值承诺或
 
 ## 附录 A：状态及来源说明
 
-- GitHub 仓库：<https://github.com/picasso250/ubic1>
-- 理念文本：<https://github.com/picasso250/ubic1/blob/main/%E5%AE%A3%E8%A8%80.md>
-- v0.2 参考合约源码：<https://github.com/picasso250/ubic1/blob/main/contracts/UBIC1V02.sol>
-- v0.2 参考规范：<https://github.com/picasso250/ubic1/blob/main/UBIC1-V0.2.md>
+- GitHub 仓库：<https://github.com/picasso250/daycoin>
+- 理念文本：<https://github.com/picasso250/daycoin/blob/main/%E5%AE%A3%E8%A8%80.md>
+- v0.2 参考合约源码：<https://github.com/picasso250/daycoin/blob/b8d6fb3/contracts/UBIC1V02.sol>
+- v0.2 参考规范：<https://github.com/picasso250/daycoin/blob/b8d6fb3/UBIC1-V0.2.md>
 - Sepolia 参考测试合约（UBIC1 v0.2，**非 DC1 正式主网合约**）：`0x407892d5606b0FB91D77C62aC306566E01963674`，Chain ID 11155111。以仓库公开记录和链上核验结果为准。
 
 ## 附录 B：术语说明

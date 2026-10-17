@@ -1,67 +1,41 @@
-# DayCoin V1 / DC1 · Ethereum Mainnet
+# DayCoin · One Coin a Day.
 
-**当前正式合约源码：** [`contracts/DayCoinV1.sol`](contracts/DayCoinV1.sol)。品牌 DayCoin，ERC-20 Name `DayCoin V1`，Symbol `DC1`。口号：*One Coin a Day.*
+DayCoin V1 (DC1) is a minimal Ethereum experiment in continuous monetary issuance. It is an independent, non-upgradeable ERC-20 contract, not guaranteed income or a promise of investment returns.
 
-**正式主网：** [`0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715`](https://etherscan.io/address/0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715)，Chain ID **1**，部署交易 [`0x868a542a…549e9155`](https://etherscan.io/tx/0x868a542a0953ecf40458b7750d3b4082a5e74e551a437d903c01ac9e549e9155)。
+## Official DC1 deployments
 
-**DC1 Sepolia：** [`0xBB322A88f2ED0EdFd3632825Cf44Bbb62B93Bd26`](https://sepolia.etherscan.io/address/0xBB322A88f2ED0EdFd3632825Cf44Bbb62B93Bd26)，Chain ID **11155111**。
+| Network | Chain ID | Contract |
+| --- | --- | --- |
+| Ethereum Mainnet | 1 | [0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715](https://etherscan.io/address/0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715) |
+| Sepolia | 11155111 | [0xBB322A88f2ED0EdFd3632825Cf44Bbb62B93Bd26](https://sepolia.etherscan.io/address/0xBB322A88f2ED0EdFd3632825Cf44Bbb62B93Bd26) |
 
-合约源自历史 UBIC1 v0.2，仅调整 Solidity 合约名及 ERC-20 名称和符号，不改变发行和存提款逻辑。**旧合约是独立历史实验，切勿使用旧 artifact 代替 DC1 部署。** 代码核验通过不等于第三方安全审计；真实钱包 Deposit → Claim → Withdraw 仍需用户自行验收。
+**ERC-20 Name:** DayCoin V1 · **Symbol:** DC1 · **Decimals:** 18
 
-本地默认构建与测试（不签名、不部署）：
+**Website:** https://daycoin.io99.xyz/ · **Solidity:** [contracts/DayCoinV1.sol](contracts/DayCoinV1.sol)
 
-```powershell
-npm run build
-npm run test:dc1
-npm test
-```
+An ETH deposit gives an *address*, not a verified human, eligibility to accrue one DC1 per qualifying day (prorated by seconds). A person can control multiple addresses. Every deposit resets the earning clock and forfeits previously unclaimed rewards. Withdraw returns recorded ETH principal, but forfeits unclaimed rewards: **Claim before any further Deposit or Withdraw**. A contract-wallet unable to receive native ETH can fail to withdraw.
 
-构建产物为 `artifacts/DayCoinV1.json`；主网和测试网部署记录在本地忽略目录 `deployments/`，**请妥善备份，不要为了重新部署而删除**。网络、部署与只读验证参见 [DEPLOY.md](DEPLOY.md)。
+There is no owner, proxy upgrade, admin mint, or admin pause. This is not a security audit; asset value is not guaranteed.
 
----
+## Development (local only)
 
-## 历史资料：UBIC1 v0.2（不是 DC1）
+- npm run build — compile DC1, creates artifacts/DayCoinV1.json
+- npm test — current DC1 contract and generic deployment tests
+- npm --prefix sites/daycoin-mainnet test — frontend unit tests
+- npm --prefix sites/daycoin-mainnet run dev — local website preview
 
-UBIC1 是一个不设 Owner、不可升级的 Ethereum 货币发行实验。**当前公开测试站只连接 Sepolia 测试网络，不使用真实主网 ETH。**
+Generic deploy.mjs and verify.mjs remain current and protected by chain/artifact-specific deployment Journals. See [DEPLOY.md](DEPLOY.md). **DC1 has already been deployed on both networks. Do not broadcast a new deployment to “verify” it.**
 
-**测试入口：** https://ubic1-sepolia.xi-aochi.workers.dev/
+## Historical UBIC1 experiments
 
-**Sepolia v0.2 合约：** [0x407892d5606b0FB91D77C62aC306566E01963674](https://sepolia.etherscan.io/address/0x407892d5606b0FB91D77C62aC306566E01963674)，Chain ID 11155111。部署区块 11928435，运行时代码 keccak256 `0x2c4e7b4318fa60fc3bf7b1560997d350585a8d474c82aa8def4818e91effe6db`。
+Old Solidity contracts, build scripts, tests, and the obsolete Sepolia website were removed from the *current tree*, but are preserved in [Git revision b8d6fb3](https://github.com/picasso250/daycoin/tree/b8d6fb3):
 
-- `Deposit`：存入任意正额测试 ETH；**每次存入都会重置计时，并永久放弃尚未领取的 UBIC1**。初始奖励资格门槛为 0.1 ETH，每千日提高 0.1 ETH。
-- `Claim`：符合资格时按秒线性累计奖励，速率每天 1 UBIC1。代币精度为 18。
-- `Withdraw`：退回记录本金，不自动领取奖励；未领部分将被放弃。交易 Gas 另付。
+- [UBIC1 v0.1 original source](https://github.com/picasso250/daycoin/blob/b8d6fb3/contracts/UBIC1.sol)
+- [UBIC1 v0.2 original source](https://github.com/picasso250/daycoin/blob/b8d6fb3/contracts/UBIC1V02.sol)
+- [UBIC1 v0.2 historical specification](https://github.com/picasso250/daycoin/blob/b8d6fb3/UBIC1-V0.2.md)
 
-一个地址不等于一个人；测试仅验证可审查的发行机制，并不构成安全或投资保证。不能接受 ETH 的合约钱包可能无法提回本金。更详细的规则与审计边界见 [UBIC1-V0.2.md](UBIC1-V0.2.md)。
+Previously deployed UBIC1 contracts remain distinct and live on the blockchain. The historical website at https://ubi.io99.xyz/ is **not** the DC1 site, and old UBIC1 is not automatically migrated.
 
-## 编译与测试
+See the [DayCoin manifesto](%E5%AE%A3%E8%A8%80.md) and [whitepaper](DayCoin_Whitepaper_v0.1.md) for the proposed long-term fairness goals. **One wallet/address is not one human.**
 
-```powershell
-npm ci
-npm run build
-npm test
-npm --prefix sites/ubic1-sepolia test
-```
-
-## 链上核验与历史网站
-
-当前 DC1 已部署，**不要重复执行部署**。可以通过通用 [只读核验器](DEPLOY.md) 检查现有合约：
-
-```powershell
-npm run verify -- .env.mainnet artifacts/DayCoinV1.json
-npm run verify -- .env.sepolia artifacts/DayCoinV1.json
-```
-
-这些命令需要本地 `deployments/` 中的原始 Journal。历史 UBIC1 的部署命令和测试仅供研究，不应用于新的 DC1 发行。
-
-当前前端位于 `sites/ubic1-sepolia/dist`，`wrangler.jsonc` 直接将其发布为现有的 `ubic1-sepolia` Cloudflare Worker。网站内容不包含私钥；只通过用户自己的 EIP-1193 钱包签名。本地预览：`npm --prefix sites/ubic1-sepolia run dev`，打开 `http://127.0.0.1:5173`。实现边界与测试见 [前端说明](sites/ubic1-sepolia/README.md)。
-
-```powershell
-npx wrangler deploy --config wrangler.jsonc
-```
-
-历史 v0.1 Solidity 源码仍保留在 `contracts/UBIC1.sol` 中供追溯；它与 v0.2 **互不升级、互不迁移**。旧版测试页面与旧版部署命令已退休，可通过 Git 历史查看。现有旧主网合约并未因网页更新而改变。
-
-## 长期原则
-
-**DayCoin** 是现行项目品牌，**DC1** 是已上主网的第一代独立合约；历史 UBIC1 v0.1、v0.2 不会自动升级或迁移到 DC1。每版自愿选择、无管理员特权，名称不赋予权威。工程上实行**最小充分责任**。
+The local deployments/ directory is excluded from Git and contains essential per-network deployment records. Back it up separately, never delete it to bypass a duplicate-deployment guard.

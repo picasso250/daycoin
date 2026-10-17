@@ -52,4 +52,4 @@ npm run verify -- .env.sepolia artifacts/DayCoinV1.json
 
 ## 历史版本与测试
 
-旧 `UBIC1.sol` / `UBIC1V02.sol` 及其历史测试目前保留作回归与审查参考，**不是现行部署入口**。使用 `npm run build` 始终只构建 DC1；旧版编译需显式执行 `npm run build:v02` 等命令。旧网页在 `sites/ubic1-*`，仍可能指向旧合约；请勿误作 DC1 官网。之后如需删除历史源码，应同步重构编译辅助程序、测试、文档链接和 CI，避免破坏验证能力。
+历史 UBIC1 的源码、旧版编译/测试与旧 Sepolia 前端已从当前工作树清除，可从 Git 修订 b8d6fb3 复现。通用部署/验证工具保留；npm run build 只编译 DC1。旧网站 ubi.io99.xyz 仍是历史入口，不是 DC1 官网。
