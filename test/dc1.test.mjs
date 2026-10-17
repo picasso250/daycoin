@@ -28,7 +28,6 @@ contract DC1Receiver {
     }
 }`;
 const compiled = compile({
-  'contracts/DayCoinV1.sol': { content: fs.readFileSync('contracts/DayCoinV1.sol', 'utf8') },
   'test/DC1Receiver.sol': { content: helper }
 });
 const artifact = compiled['contracts/DayCoinV1.sol'].DayCoinV1;

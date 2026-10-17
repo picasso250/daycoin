@@ -29,9 +29,7 @@ test('generic deployment configuration checks chain and rejects invalid artifact
 });
 
 test('generic artifact creation bytes and runtime immutables match DC1 build',()=>{
-  const built=compile({'contracts/DayCoinV1.sol':{
-    content:fs.readFileSync('contracts/DayCoinV1.sol','utf8')
-  }})['contracts/DayCoinV1.sol'].DayCoinV1;
+  const built=compile()['contracts/DayCoinV1.sol'].DayCoinV1;
   const refs=Object.values(built.evm.deployedBytecode.immutableReferences);
   assert.equal(refs.length,1);
   const runtime=built.evm.deployedBytecode.object;
@@ -62,9 +60,7 @@ test('generic deploy and verify use exactly env file and artifact, local Sepolia
   }
   fs.symlinkSync(path.resolve('node_modules'),path.join(dir,'node_modules'),'junction');
   fs.mkdirSync(path.join(dir,'artifacts'));
-  const built=compile({'contracts/DayCoinV1.sol':{
-    content:fs.readFileSync('contracts/DayCoinV1.sol','utf8')
-  }})['contracts/DayCoinV1.sol'].DayCoinV1;
+  const built=compile()['contracts/DayCoinV1.sol'].DayCoinV1;
   const art='artifacts/DayCoinV1.json';
   fs.writeFileSync(path.join(dir,art),JSON.stringify(built));
   const key=Object.values(server.provider.getInitialAccounts())[0].secretKey;
@@ -127,7 +123,7 @@ test('generic deploy refuses wrong chain before any broadcast', {timeout:40000},
   for(const name of ['deploy.mjs','deployment-common.mjs','deployment-journal.mjs'])fs.copyFileSync(path.join('scripts',name),path.join(dir,'scripts',name));
   fs.symlinkSync(path.resolve('node_modules'),path.join(dir,'node_modules'),'junction');
   fs.mkdirSync(path.join(dir,'artifacts'));
-  const built=compile({'contracts/DayCoinV1.sol':{content:fs.readFileSync('contracts/DayCoinV1.sol','utf8')}})['contracts/DayCoinV1.sol'].DayCoinV1;
+  const built=compile()['contracts/DayCoinV1.sol'].DayCoinV1;
   fs.writeFileSync(path.join(dir,'artifacts/DayCoinV1.json'),JSON.stringify(built));
   const key=Object.values(server.provider.getInitialAccounts())[0].secretKey;
   fs.writeFileSync(path.join(dir,'.env.sepolia'),`CHAIN_ID=11155111\nRPC_URL=${url}\nPRIVATE_KEY=${key}\n`);
