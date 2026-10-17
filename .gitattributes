@@ -1,0 +1,3 @@
+# Preserve the exact original historical Solidity compilation input bytes.
+# Autocrlf would change the DC1 creation metadata / creation hash.
+scripts/fixtures/UBIC1-v01-metadata-source.txt -text

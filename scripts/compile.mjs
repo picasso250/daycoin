@@ -6,7 +6,14 @@ import solc from 'solc';
 export function compile(extraSources = {}) {
   const input = {
     language: 'Solidity',
-    sources: { 'contracts/DayCoinV1.sol': { content: fs.readFileSync('contracts/DayCoinV1.sol', 'utf8') }, ...extraSources },
+    // Solidity's bytecode metadata includes the full compilation source set.
+    // Retain the original v0.1 compiler input AS DATA (not a deployable contract)
+    // to reproduce the already-deployed DC1 creation bytecode exactly.
+    sources: {
+      'contracts/UBIC1.sol': { content: fs.readFileSync('scripts/fixtures/UBIC1-v01-metadata-source.txt', 'utf8') },
+      'contracts/DayCoinV1.sol': { content: fs.readFileSync('contracts/DayCoinV1.sol', 'utf8') },
+      ...extraSources
+    },
     settings: {
       optimizer: { enabled: true, runs: 200 },
       evmVersion: 'shanghai',
