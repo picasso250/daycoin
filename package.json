@@ -9,7 +9,8 @@
     "test:dc1": "node --test test/dc1.test.mjs",
     "test:deploy": "node --test test/generic-deployment.test.mjs",
     "deploy": "node scripts/deploy.mjs",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "build:whitepaper": "npm --prefix sites/daycoin-mainnet run build:whitepaper"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.4.0"

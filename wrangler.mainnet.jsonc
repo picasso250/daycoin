@@ -4,6 +4,7 @@
   "compatibility_date": "2026-10-16",
   "workers_dev": true,
   "preview_urls": false,
+  "build": { "command": "npm run build:whitepaper" },
   "routes": [{ "pattern": "daycoin.io99.xyz", "custom_domain": true }],
   "assets": {
     "directory": "./sites/daycoin-mainnet/dist"

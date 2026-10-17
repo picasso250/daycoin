@@ -9,3 +9,8 @@ deployments/
 *.tar.gz
 
 **/test-output/
+
+# Rebuilt from the single Markdown source (npm run build:whitepaper).
+sites/daycoin-mainnet/dist/whitepaper.html
+sites/daycoin-mainnet/dist/whitepaper.pdf
+sites/daycoin-mainnet/dist/whitepaper-assets/

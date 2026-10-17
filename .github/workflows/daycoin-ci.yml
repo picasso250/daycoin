@@ -7,6 +7,7 @@ on:
       - 'scripts/**'
       - 'test/**'
       - 'sites/daycoin-mainnet/**'
+      - 'DayCoin_Whitepaper_*.md'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/daycoin-ci.yml'
@@ -48,6 +49,10 @@ jobs:
         run: npm ci --prefix sites/daycoin-mainnet --ignore-scripts --no-audit --no-fund
       - name: Install Chromium browser
         run: npx --prefix sites/daycoin-mainnet playwright install --with-deps chromium
+      - name: Build HTML and PDF from the single whitepaper Markdown
+        run: npm run build:whitepaper
+      - name: Whitepaper source, math, responsive layout, and PDF checks
+        run: npm --prefix sites/daycoin-mainnet run test:whitepaper
       - name: Website unit tests
         run: npm --prefix sites/daycoin-mainnet test
       - name: Browser E2E against a local preview and mocked chain

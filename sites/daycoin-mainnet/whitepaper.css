@@ -1,0 +1,393 @@
+@font-face {
+  font-family: Space;
+  src: url("/fonts/space-grotesk-500.ttf");
+}
+:root {
+  color-scheme: light;
+  --ink: #242a26;
+  --muted: #657166;
+  --green: #315b45;
+  --line: #dcded5;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-padding-top: 30px;
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  background: #fffefa;
+  font:
+    16px/1.95 "Noto Sans SC",
+    sans-serif;
+}
+a {
+  color: var(--green);
+  text-underline-offset: 4px;
+  overflow-wrap: anywhere;
+}
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 5px;
+}
+header {
+  max-width: 1200px;
+  margin: auto;
+  padding: 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  gap: 20px;
+}
+header a {
+  text-decoration: none;
+}
+header nav {
+  display: flex;
+  gap: 24px;
+}
+.brand {
+  font-family: Space, sans-serif;
+  letter-spacing: 0.12em;
+}
+.layout {
+  max-width: 1200px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 64px;
+  padding: 0 32px;
+}
+aside {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  margin-top: 56px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+aside summary {
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+aside ol {
+  list-style: none;
+  padding: 0;
+}
+aside li {
+  margin: 10px 0;
+}
+aside a {
+  text-decoration: none;
+}
+aside .sub {
+  padding-left: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+main {
+  min-width: 0;
+}
+.cover {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 44px;
+}
+.cover .brand {
+  color: var(--green);
+  font-size: 18px;
+}
+.cover h1 {
+  font:
+    500 clamp(38px, 5vw, 64px) / 1.1 Space,
+    sans-serif;
+  letter-spacing: -0.05em;
+  margin: 26px 0;
+}
+.subtitle {
+  font-size: 22px;
+  margin: 0 0 30px;
+}
+.motto {
+  font-size: 16px;
+}
+.metadata {
+  margin-top: 36px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.metadata a {
+  display: block;
+  font-size: 11px;
+}
+.document-title {
+  font-size: 23px;
+}
+h2 {
+  font-size: 25px;
+  line-height: 1.5;
+  margin: 64px 0 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+h3 {
+  font-size: 19px;
+  line-height: 1.6;
+  margin: 36px 0 16px;
+}
+p {
+  margin: 18px 0;
+}
+strong {
+  font-weight: 700;
+}
+blockquote {
+  margin: 24px 0;
+  padding: 2px 20px;
+  border-left: 3px solid var(--green);
+  background: #f4f3ee;
+}
+ul,
+ol {
+  padding-left: 24px;
+}
+li {
+  margin: 9px 0;
+}
+code {
+  font:
+    0.86em/1.7 Consolas,
+    monospace;
+  overflow-wrap: anywhere;
+}
+pre {
+  white-space: pre-wrap;
+  background: #f4f3ee;
+  padding: 16px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 26px 0;
+  table-layout: fixed;
+}
+th,
+td {
+  padding: 12px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+th {
+  background: #f4f3ee;
+  font-weight: 700;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 40px 0;
+}
+.katex {
+  font-size: 1.05em;
+}
+.katex .cjk_fallback {
+  font-family: "Noto Sans SC", sans-serif;
+}
+.math-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 10px 0;
+  max-width: 100%;
+}
+.math-display .katex-display {
+  margin: 8px 0;
+}
+.endnote {
+  margin: 64px 0 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.skip {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+}
+.skip:focus {
+  top: 10px;
+}
+@media (max-width: 800px) {
+  header {
+    padding: 20px;
+  }
+  .layout {
+    display: block;
+    padding: 0 20px;
+  }
+  aside {
+    position: static;
+    max-height: none;
+    margin-top: 24px;
+  }
+  aside ol {
+    max-height: 55vh;
+    overflow: auto;
+  }
+  .cover {
+    padding: 44px 0 36px;
+  }
+  .cover h1 {
+    font-size: 44px;
+  }
+  body {
+    font-size: 15px;
+  }
+  h2 {
+    font-size: 22px;
+  }
+  table {
+    font-size: 11px;
+  }
+  th,
+  td {
+    padding: 9px 6px;
+  }
+  .math-display {
+    font-size: 0.9em;
+  }
+}
+@page {
+  size: A4;
+  margin: 20mm 18mm 22mm;
+  @bottom-left {
+    content: "DAYCOIN / WHITEPAPER";
+    font: 8pt sans-serif;
+    color: #657166;
+  }
+  @bottom-right {
+    content: counter(page);
+    font: 8pt sans-serif;
+    color: #657166;
+  }
+}
+@page:first {
+  @bottom-left {
+    content: none;
+  }
+  @bottom-right {
+    content: none;
+  }
+}
+@media print {
+  article > ul:last-child {
+    break-inside: avoid;
+  }
+}
+@media print {
+  body {
+    background: white;
+    font-size: 9.5pt;
+    line-height: 1.8;
+  }
+  header,
+  aside,
+  .skip,
+  .endnote {
+    display: none;
+  }
+  .layout {
+    display: block;
+    max-width: none;
+    padding: 0;
+  }
+  .cover {
+    height: 245mm;
+    break-after: page;
+    margin: 0;
+    padding: 42mm 0 0;
+    border: 0;
+  }
+  .cover h1 {
+    font-size: 46pt;
+    margin: 16mm 0 8mm;
+  }
+  .cover .subtitle {
+    font-size: 19pt;
+  }
+  .cover .metadata {
+    margin-top: 36mm;
+    font-size: 10pt;
+  }
+  .cover .metadata a {
+    font-size: 9pt;
+  }
+  .document-title {
+    font-size: 18pt;
+  }
+  h2 {
+    font-size: 15pt;
+    margin: 9mm 0 4mm;
+    padding-top: 4mm;
+  }
+  h3 {
+    font-size: 12pt;
+    margin: 6mm 0 3mm;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  p {
+    margin: 3mm 0;
+    orphans: 3;
+    widows: 3;
+  }
+  li {
+    margin: 2mm 0;
+  }
+  table {
+    font-size: 8pt;
+    margin: 4mm 0;
+    break-inside: avoid;
+  }
+  tr {
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  th,
+  td {
+    padding: 2.2mm;
+  }
+  blockquote,
+  pre,
+  .math-display {
+    break-inside: avoid;
+  }
+  a {
+    color: inherit;
+  }
+  .math-display {
+    overflow: visible;
+    font-size: 9pt;
+    padding: 2mm 0;
+  }
+  .katex-display {
+    white-space: nowrap;
+  }
+  hr {
+    margin: 6mm 0;
+  }
+}
