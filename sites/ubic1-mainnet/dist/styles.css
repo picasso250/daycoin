@@ -1070,3 +1070,49 @@ button.dark:hover:not(:disabled)  {
  
 }
 
+
+/* UI v2: issuance is the focal point; wallet selection lives in a dialog. */
+.position-body { display:block; padding:36px 48px 16px; }
+.pending-main { border:0; padding:0 0 34px; text-align:center; }
+.reward-number { display:flex; flex-direction:column; align-items:center; gap:8px; margin:18px 0; }
+.reward-number>span:first-child { font-size:clamp(96px,8vw,112px); line-height:1.1; width:100%; letter-spacing:-4px; }
+.reward-number .unit { font-size:18px; letter-spacing:2px; }
+.pending-main .issuance-caption { font-size:13px; min-height:0; color:var(--green); margin:16px 0 8px; }
+.pending-main #claimable { font-size:11px; min-height:0; }
+.position-metrics { border-top:1px solid var(--line); padding:28px 0; max-width:720px; margin:auto; gap:28px 48px; }
+.position-metrics .metric strong { font-size:28px; }
+.qualification { display:flex; justify-content:space-between; gap:16px; max-width:720px; margin:auto; padding:0 0 24px; color:var(--green); font-size:12px; line-height:1.8; }
+.qualification p { margin:0; }
+.qualification strong { font-weight:500; }
+.position-start { align-items:center; }
+.position-start button { font-size:11px; padding:7px 10px; }
+.protocol-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+#next-epoch { font-size:22px; }
+#wallet-menu { max-width:420px; padding:28px; box-shadow:0 24px 80px #17251f25; }
+.wallet-menu-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.wallet-menu-heading h2 { margin:16px 0; }
+#wallet-close { border:0; padding:0 5px; font-size:26px; font-weight:400; line-height:1; }
+#wallet-list { display:grid; gap:10px; }
+.wallet-choice { display:flex; justify-content:space-between; text-align:left; padding:16px 18px; border-radius:8px; background:#f7f8f2; }
+.wallet-choice:hover:not(:disabled) { border-color:#9cae92; background:#edf0e5; }
+#wallet-feedback { font-size:12px; color:var(--muted); margin:8px 0 18px; min-height:24px; }
+#wallet-menu .wallet-menu-note { font-size:10px; color:var(--muted); margin:18px 0 0; }
+#connected-wallet { border-top:1px solid var(--line); padding-top:18px; }
+#full-account { font:12px/1.9 monospace; user-select:all; }
+#copy-address { padding:8px 12px; font-size:11px; }
+.wallet-switch-label { border-top:1px solid var(--line); padding-top:18px; margin-bottom:8px; font-size:12px; }
+@media(max-width:700px) {
+ .position-body { padding:28px 22px 12px; }
+ .pending-main { padding-bottom:28px; }
+ .reward-number>span:first-child { font-size:64px; letter-spacing:-2.5px; }
+ .stamp-number { font-size:48px; }
+ .position-metrics { gap:24px 18px; }
+ .position-metrics .metric strong { font-size:22px; }
+ .qualification { flex-direction:column; gap:6px; }
+ .protocol-grid>div { padding:20px 16px; }
+ .protocol-grid strong { font-size:23px; }
+ #next-epoch { font-size:18px; }
+ .section-heading>span { max-width:140px; }
+ .card-top { gap:12px; flex-wrap:wrap; }
+ #wallet-menu { padding:24px; }
+}

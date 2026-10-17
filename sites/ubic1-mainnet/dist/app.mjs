@@ -1,79 +1,148 @@
+import { readDashboard } from './dashboard.mjs';
 import { ADDRESS, RUNTIME_HASH, Wallet, Transactions, amount, depositValue, readPosition } from './core.mjs';
 
 const $ = id => document.getElementById(id);
 const transactions = new Transactions();
 const providers = [];
-let wallet, identity, position, loading = false, version = 0;
+let wallet, identity, position, dashboard, connectedAccount = '', loading = false, version = 0, overviewVersion = 0;
+let detecting = false;
 const explorer = 'https://etherscan.io';
 $('contract').textContent = ADDRESS;
 $('contract').href = `${explorer}/address/${ADDRESS}`;
 $('runtime').textContent = RUNTIME_HASH;
+function displayAmount(value, digits = 4) {
+  const [whole, fraction = ''] = amount(value).split('.');
+  return `${whole}.${fraction.padEnd(digits, '0')}`;
+}
 function status(message, error = false) {
   $('status').textContent = message;
   $('status').parentElement.dataset.error = String(error);
 }
 function render() {
   const locked = loading || transactions.busy || transactions.uncertain;
-  $('connect').disabled = locked;
-  $('wallets').disabled = locked;
-  $('refresh').disabled = !wallet || loading || transactions.busy;
+  $('connect').disabled = loading || transactions.busy;
+  $('connect').textContent = connectedAccount ? `${connectedAccount.slice(0, 6)}…${connectedAccount.slice(-3)} ▾` : 'Connect Wallet ↗';
+  $('refresh').disabled = loading || transactions.busy;
+  $('connected-wallet').hidden = !connectedAccount;
+  $('full-account').textContent = connectedAccount;
+  renderWallets();
   $('deposit').disabled = locked || !position;
   $('claim').disabled = locked || !position || position.pending === 0n;
   $('withdraw').disabled = locked || !position || position.principal === 0n;
-  $('account').textContent = identity ? identity.account : '连接钱包以查看仓位';
-  for (const key of ['principal', 'pending', 'balance', 'required']) $(key).textContent = position ? amount(position[key]) : '—';
+  $('eth-balance').textContent = dashboard?.ethBalance != null && position ? displayAmount(dashboard.ethBalance) : '—';
+  $('gap').textContent = position ? amount(position.required > position.principal ? position.required - position.principal : 0n) : '—';
+  for (const key of ['principal', 'pending', 'balance', 'required']) $(key).textContent = position ? (key === 'required' ? amount(position[key]) : displayAmount(position[key], key === 'pending' ? 6 : 4)) : '—';
   $('claimable').textContent = position ? (position.pending > 0n ? '可领取 · 不受当前累计资格影响' : '暂无可领取奖励') : '连接后查看领取资格';
   $('eligibility').textContent = !position ? '等待有效链上数据' : position.principal >= position.required ? '● 当前达标 · 正在累计奖励' : position.principal === 0n ? '○ 尚未存入本金' : '○ 当前未达标 · 不再累计新奖励';
+  renderProtocol();
   $('updated').textContent = position ? `区块 ${BigInt(position.block.number)} · ${new Date(Number(BigInt(position.block.timestamp)) * 1000).toLocaleTimeString('zh-CN')} 快照` : '链上快照 · 未读取';
 }
 function invalidate() {
-  version++; identity = undefined; position = undefined;
+  version++; identity = undefined; position = undefined; connectedAccount = '';
+  $('wallet-feedback').textContent = '';
   if ($('confirmation').open) $('confirmation').close('cancel');
   status(transactions.uncertain ? '交易结果未知，请先核对钱包历史；刷新不代表交易失败。' : '钱包账户或网络已变化，请重新连接或刷新。', true);
   render();
 }
+function renderProtocol() {
+  for (const [id, key, format] of [
+    ['total-supply', 'totalSupply', amount], ['current-epoch', 'currentEpoch', String],
+    ['protocol-required', 'requiredDeposit', amount],
+    ['next-epoch', 'nextEpochTime', value => new Date(Number(value) * 1000).toISOString().slice(0, 16).replace('T', ' ')],
+  ]) $(id).textContent = dashboard?.[key] != null ? format(dashboard[key]) : '—';
+  $('protocol-updated').textContent = dashboard ? `主网区块 ${BigInt(dashboard.block.number)} · 快照` : '链上数据未读取';
+}
+function renderWallets() {
+  $('wallet-list').replaceChildren();
+  for (const item of providers) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'wallet-choice';
+    button.textContent = `${item.name} ↗`;
+    button.disabled = detecting || loading || transactions.busy || transactions.uncertain;
+    button.addEventListener('click', () => connectWallet(item));
+    $('wallet-list').append(button);
+  }
+}
 function addProvider(provider, name) {
   if (!provider || providers.some(item => item.provider === provider)) return;
-  providers.push({ provider, name });
-  const option = document.createElement('option');
-  option.value = String(providers.length - 1); option.textContent = name;
-  if (providers.length === 1) $('wallets').replaceChildren();
-  $('wallets').append(option);
+  providers.push({ provider, name }); renderWallets();
+  if ($('wallet-menu').open && !detecting && !loading) $('wallet-feedback').textContent = '选择一个钱包以继续。';
 }
 window.addEventListener('eip6963:announceProvider', event => {
   if (event.detail?.provider) addProvider(event.detail.provider, String(event.detail.info?.name || '浏览器钱包'));
 });
 window.dispatchEvent(new Event('eip6963:requestProvider'));
-// Legacy injection is read only on connect, after modern wallet announcements.
+$('connect').addEventListener('click', () => {
+  const menu = $('wallet-menu');
+  $('wallet-title').textContent = connectedAccount ? '你的钱包' : '连接你的钱包';
+  $('copy-address').textContent = '复制地址';
+  detecting = true; $('wallet-feedback').textContent = 'Loading · 正在检测钱包…';
+  renderWallets(); menu.showModal();
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+  setTimeout(() => {
+    if (!providers.length) {
+      try { addProvider(window.ethereum, '浏览器钱包'); } catch { /* unavailable injection */ }
+    }
+    detecting = false; renderWallets();
+    $('wallet-feedback').textContent = transactions.uncertain ? '交易结果未知，请先在钱包核对；本页暂不允许切换钱包或发送交易。' : providers.length ? '选择一个钱包以继续。' : '未检测到钱包。请安装 MetaMask、Rabby 等浏览器钱包，或使用钱包内置浏览器打开。';
+  }, 350);
+});
+$('wallet-close').addEventListener('click', () => $('wallet-menu').close());
+$('wallet-menu').addEventListener('click', event => {
+  if (event.target !== $('wallet-menu')) return;
+  const bounds = event.target.getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.target.close();
+});
+$('copy-address').addEventListener('click', async () => {
+  if (!connectedAccount) return;
+  try { await navigator.clipboard.writeText(connectedAccount); $('copy-address').textContent = '已复制 ✓'; }
+  catch { $('wallet-feedback').textContent = '无法访问剪贴板，请选中上方完整地址复制。'; }
+});
+async function loadProtocol() {
+  const request = ++overviewVersion;
+  dashboard = undefined; renderProtocol();
+  try {
+    const next = await readDashboard();
+    if (request !== overviewVersion) return;
+    dashboard = next; renderProtocol();
+  } catch {
+    if (request === overviewVersion) $('protocol-updated').textContent = '读取失败 · 可点击刷新重试';
+  }
+}
 async function refresh() {
-  if (!wallet || loading) return;
-  loading = true; position = undefined; const currentVersion = ++version; render();
+  if (loading) return;
+  if (!wallet) { await loadProtocol(); return; }
+  loading = true; position = undefined; dashboard = undefined; ++overviewVersion;
+  const currentVersion = ++version; render();
   try {
     const nextIdentity = await wallet.identity();
     const nextPosition = await readPosition(nextIdentity.account);
+    const nextDashboard = await readDashboard(nextIdentity.account, nextPosition.block);
     await wallet.assertIdentity(nextIdentity);
     if (currentVersion !== version) return;
-    identity = nextIdentity; position = nextPosition;
+    identity = nextIdentity; connectedAccount = nextIdentity.account; position = nextPosition; dashboard = nextDashboard;
     if (!transactions.uncertain) status('链上数据已更新，合约 Runtime Hash 核对通过。');
   } catch (error) {
     if (currentVersion === version) { identity = undefined; position = undefined; status(error.message, true); }
   } finally { loading = false; render(); }
 }
-$('connect').addEventListener('click', async () => {
-  if (loading || transactions.busy || transactions.uncertain) return;
-  loading = true; render();
+async function connectWallet(selected) {
+  if (detecting || loading || transactions.busy || transactions.uncertain) return;
+  loading = true; ++overviewVersion; render();
   try {
-    if (!providers.length) addProvider(window.ethereum, '浏览器钱包');
-    const selected = providers[Number($('wallets').value)];
-    if (!selected) throw Error('未发现钱包。请安装支持 EIP-1193 的浏览器钱包，或在钱包内置浏览器打开。');
     wallet?.dispose(); invalidate();
     wallet = new Wallet(selected.provider, invalidate);
-    await wallet.request('eth_requestAccounts');
-    status('正在读取 Mainnet 链上数据…');
-  } catch (error) { status(error.code === 4001 ? '已取消连接。' : error.message, true); loading = false; render(); return; }
+    $('wallet-feedback').textContent = '请在钱包中确认连接授权…';
+    const accounts = await wallet.request('eth_requestAccounts');
+    connectedAccount = /^0x[0-9a-f]{40}$/i.test(accounts?.[0] || '') ? accounts[0] : '';
+    $('wallet-menu').close(); status('正在读取 Mainnet 链上数据…');
+  } catch (error) {
+    const message = error.code === 4001 ? '已取消连接。' : error.message;
+    status(message, true); $('wallet-feedback').textContent = message;
+    loading = false; render(); return;
+  }
   loading = false; await refresh();
-});
-$('wallets').addEventListener('change', () => { wallet?.dispose(); wallet = undefined; invalidate(); });
+}
 $('refresh').addEventListener('click', refresh);
 function confirmOperation(kind, value, snapshot) {
   $('confirm-title').textContent = { deposit: '存入ETH', claim: '领取 UBIC1', withdraw: '取回全部本金' }[kind];
@@ -133,3 +202,5 @@ for (const [index, tab] of tabs.entries()) {
     event.preventDefault(); selectTab(tabs[next]); tabs[next].focus();
   });
 }
+
+loadProtocol();
