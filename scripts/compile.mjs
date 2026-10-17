@@ -11,7 +11,9 @@ export function compile(extraSources = {}) {
     // to reproduce the already-deployed DC1 creation bytecode exactly.
     sources: {
       'contracts/UBIC1.sol': { content: fs.readFileSync('scripts/fixtures/UBIC1-v01-metadata-source.txt', 'utf8') },
-      'contracts/DayCoinV1.sol': { content: fs.readFileSync('contracts/DayCoinV1.sol', 'utf8') },
+      // Exact mainnet build used Windows CRLF for DayCoinV1.sol; normalize
+      // input bytes independent of checkout OS (GitHub Actions uses LF).
+      'contracts/DayCoinV1.sol': { content: fs.readFileSync('contracts/DayCoinV1.sol', 'utf8').replace(/\r?\n/g, '\r\n') },
       ...extraSources
     },
     settings: {

@@ -16,7 +16,7 @@ npm test
 
 默认构建产物：`artifacts/DayCoinV1.json`。编译器 Solidity 0.8.37，EVM Shanghai，Optimizer runs 200。
 
-**精确复现说明：** Solidity 的构建元数据受完整编译输入文件集合影响。为严格重现已部署 DC1 的 Creation Hash，`scripts/compile.mjs` 仍将历史 UBIC1 v0.1 源码作为**只读文本编译输入**读取自 `scripts/fixtures/UBIC1-v01-metadata-source.txt`，映射到原逻辑路径 `contracts/UBIC1.sol`。这不是当前目录内可直接部署的旧合约，不会生成旧版 artifact，也不会成为任何网站或部署脚本的默认目标；**不要删改该复现用数据文件**。
+**精确复现说明：** Solidity 的构建元数据受完整编译输入文件集合影响。为严格重现已部署 DC1 的 Creation Hash，`scripts/compile.mjs` 仍将历史 UBIC1 v0.1 源码作为**只读文本编译输入**读取自 `scripts/fixtures/UBIC1-v01-metadata-source.txt`，映射到原逻辑路径 `contracts/UBIC1.sol`。这不是当前目录内可直接部署的旧合约，不会生成旧版 artifact，也不会成为任何网站或部署脚本的默认目标；**不要删改该复现用数据文件**。另外，主网上链产物使用 Windows CRLF 行结束符的 `DayCoinV1.sol`，因此构建器显式将该源文件编译输入统一为 CRLF；这样 GitHub Actions 的 Linux checkout 也能生成相同的 Solidity 元数据和字节码。
 
 部署产物基准 Creation Hash 为：
 
