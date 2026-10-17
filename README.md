@@ -36,6 +36,6 @@ Old Solidity contracts, build scripts, tests, and the obsolete Sepolia website w
 
 Previously deployed UBIC1 contracts remain distinct and live on the blockchain. The historical website at https://ubi.io99.xyz/ is **not** the DC1 site, and old UBIC1 is not automatically migrated.
 
-See the [DayCoin manifesto](%E5%AE%A3%E8%A8%80.md) and [whitepaper](DayCoin_Whitepaper_v0.1.md) for the proposed long-term fairness goals. **One wallet/address is not one human.**
+See the [DayCoin manifesto](%E5%AE%A3%E8%A8%80.md) and [whitepaper](DayCoin_Whitepaper_v0.2.md) for the proposed long-term fairness goals. **One wallet/address is not one human.**
 
 The local deployments/ directory is excluded from Git and contains essential per-network deployment records. Back it up separately, never delete it to bypass a duplicate-deployment guard.
