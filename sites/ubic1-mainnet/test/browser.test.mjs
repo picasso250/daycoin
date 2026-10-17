@@ -14,10 +14,10 @@ before(async () => { browser = await chromium.launch({ ...(process.platform === 
 after(async () => { await browser?.close(); });
 async function setup(options = {}) {
   const context = await browser.newContext({ viewport: { width: 1360, height: 1000 } });
-  const page = await context.newPage(); const errors = [];
+  const page = await context.newPage(); const errors = [], rpcCalls = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('https://ethereum-rpc.publicnode.com/**', async route => {
-    const { method, params } = route.request().postDataJSON(); let result;
+    const { method, params } = route.request().postDataJSON(); rpcCalls.push(method); let result;
     if (method === 'eth_getBalance') {
       if (options.balanceError) { await route.fulfill({ json: { jsonrpc: '2.0', id: 1, error: { code: -32000, message: 'unavailable' } } }); return; }
       result = '0x29a2241af62c0000';
@@ -29,7 +29,7 @@ async function setup(options = {}) {
     if (method === 'eth_call') {
       const parsed = abi.parseTransaction(params[0]) || overviewAbi.parseTransaction(params[0]);
       const name = parsed.name;
-      const values = { positions: [1n, 100000000000000000n], pending: [500000000000000000n], balanceOf: [2n * 10n ** 18n], requiredDeposit: [200000000000000000n], totalSupply: [3000000000000000000n], currentEpoch: [1n], genesisTime: [1600000000n], EPOCH_DURATION: [86400000n] };
+      const values = { positions: [options.activeReward ? BigInt(block.timestamp) : 1n, 100000000000000000n], pending: [options.activeReward ? 0n : 500000000000000000n], balanceOf: [2n * 10n ** 18n], requiredDeposit: [options.activeReward ? 100000000000000000n : 200000000000000000n], totalSupply: [3000000000000000000n], currentEpoch: [options.activeReward ? 0n : 1n], genesisTime: [options.activeReward ? BigInt(block.timestamp) - 3600n : 1600000000n], EPOCH_DURATION: [86400000n] };
       result = (abi.getFunction(name) ? abi : overviewAbi).encodeFunctionResult(name, values[name]);
     }
     await route.fulfill({ json: { jsonrpc: '2.0', id: 1, result } });
@@ -67,14 +67,34 @@ async function setup(options = {}) {
   }, { account, chain: CHAIN, code, block, hash, options });
   await page.goto(base);
   await page.evaluate(() => document.fonts.ready);
-  return { page, context, errors };
+  return { page, context, errors, rpcCalls };
 }
+test('deposit defaults to actual 0.1 ETH and stays editable without sending automatically', async () => {
+  const { page, context, errors } = await setup();
+  try {
+    assert.equal(await page.locator('#deposit-amount').inputValue(), '0.1');
+    assert.equal(await page.locator('#deposit-amount').getAttribute('placeholder'), null);
+    await page.locator('#connect').click();
+    await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
+    await page.waitForFunction(() => !document.querySelector('#deposit').disabled);
+    assert.equal(await page.evaluate(() => testWallet.sent.length), 0);
+    await page.locator('#deposit').click();
+    await page.locator('#confirmation').waitFor({ state: 'visible' });
+    assert.ok((await page.locator('#confirm-body').textContent()).includes('0.1 ETH'));
+    assert.equal(await page.evaluate(() => testWallet.sent.length), 0);
+    await page.locator('#confirmation button[value="cancel"]').click();
+    await page.locator('#deposit-amount').fill('0.02');
+    assert.equal(await page.locator('#deposit-amount').inputValue(), '0.02');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
 test('desktop/mobile layout, fixed contract, strict Proxy wallet and historical claim eligibility', async () => {
   const { page, context, errors } = await setup();
   try {
     await page.locator('#connect').click(); await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click(); await page.waitForFunction(() => !document.querySelector('#claim').disabled);
     assert.equal(await page.locator('#principal').textContent(), '0.1000');
-    assert.equal(await page.locator('#pending').textContent(), '0.500000');
+    assert.equal(await page.locator('#pending').textContent(), '0.50000');
     assert.equal(await page.locator('#balance').textContent(), '2.0000');
     assert.match(await page.locator('#eligibility').textContent(), /未达标/);
     assert.equal(await page.locator('#contract').textContent(), ADDRESS);
@@ -124,13 +144,13 @@ test('wrong network has no enabled transaction buttons', async () => {
     for (const kind of ['deposit', 'claim', 'withdraw']) assert.equal(await page.locator('#' + kind).isDisabled(), true);
   } finally { await context.close(); }
 });
-test('unknown broadcast blocks all later transactions, including after refresh', async () => {
+test('unknown broadcast blocks all later transactions without a manual refresh control', async () => {
   const { page, context } = await setup({ fail: true });
   try {
     await page.locator('#connect').click(); await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click(); await page.waitForFunction(() => !document.querySelector('#claim').disabled);
     await page.locator('#tab-claim').click(); await page.locator('#claim').click(); await page.getByRole('button', { name: '我已了解，继续到钱包' }).click();
     await page.waitForFunction(() => document.querySelector('#status').textContent.includes('交易结果未知'));
-    await page.locator('#refresh').click(); await page.waitForFunction(() => !document.querySelector('#refresh').disabled);
+    assert.equal(await page.locator('#refresh').count(), 0);
     for (const kind of ['deposit', 'claim', 'withdraw']) assert.equal(await page.locator('#' + kind).isDisabled(), true);
     assert.equal(await page.evaluate(() => testWallet.sent.length), 1);
   } finally { await context.close(); }
@@ -162,8 +182,9 @@ test('wallet picker detects before authorization, displays full address and supp
     assert.equal(await page.evaluate(() => testWallet.authorizations), 0);
     await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
     await page.waitForFunction(() => !document.querySelector('#claim').disabled);
-    assert.equal(await page.locator('#connect').textContent(), '0x1212…212 ▾');
-    assert.equal(await page.locator('#eth-balance').textContent(), '3.0000');
+    assert.equal(await page.locator('#connect').textContent(), '0x1212…1212 ▾');
+    assert.deepEqual(await page.locator('#connect').evaluate(el => ({ padding: getComputedStyle(el).paddingLeft, minWidth: getComputedStyle(el).minWidth })), { padding: '12px', minWidth: '0px' });
+    assert.equal(await page.locator('#eth-balance').textContent(), '3.000000');
     assert.equal(await page.locator('#gap').textContent(), '0.1');
     assert.equal(await page.locator('#total-supply').textContent(), '3.0');
     assert.equal(await page.locator('#current-epoch').textContent(), '1');
@@ -206,6 +227,24 @@ test('failed ETH read displays dash while principal and operations remain availa
     assert.equal(await page.locator('#principal').textContent(), '0.1000');
   } finally { await context.close(); }
 });
+test('pending ticks locally each second with five decimals and no repeated RPC reads', async () => {
+  const { page, context, errors, rpcCalls } = await setup({ activeReward: true });
+  try {
+    assert.equal(await page.locator('#refresh').count(), 0);
+    await page.locator('#connect').click();
+    await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('#eth-balance').textContent !== '—');
+    const first = await page.locator('#pending').textContent();
+    assert.match(first, /^\d+\.\d{5}$/);
+    const calls = rpcCalls.length;
+    await page.waitForFunction(previous => Number(document.querySelector('#pending').textContent) > Number(previous), first, { timeout: 4000 });
+    const second = await page.locator('#pending').textContent();
+    assert.match(second, /^\d+\.\d{5}$/);
+    assert.equal(rpcCalls.length, calls, 'timer must not poll RPC');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
 test('connection rejection stays in menu with a retryable wallet choice', async () => {
   const { page, context } = await setup({ reject: true });
   try {

@@ -1071,6 +1071,12 @@ button.dark:hover:not(:disabled)  {
 }
 
 
+/* The pending number changes every second without a network request. */
+#pending, #eth-balance { font-variant-numeric: tabular-nums; }
+
+/* Keep the wallet control compact at desktop and mobile widths. */
+header #connect { min-width:0; padding:11px 12px; white-space:nowrap; }
+
 /* UI v2: issuance is the focal point; wallet selection lives in a dialog. */
 .position-body { display:block; padding:36px 48px 16px; }
 .pending-main { border:0; padding:0 0 34px; text-align:center; }

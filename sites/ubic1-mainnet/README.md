@@ -16,7 +16,7 @@
 - 只读 RPC：`https://ethereum-rpc.publicnode.com`。
 - 2026-10-17 于区块 `0x18fe22c` 核验 runtime 及合约 getter：`decimals=18`、`DEPOSIT_STEP=100000000000000000`、`PERIOD=86400`、`REWARD_PER_DAY=1000000000000000000`、`EPOCH_DURATION=86400000`。没有签名或发送交易。
 
-业务代码以已验证的 Sepolia v0.2 `core.mjs`、`app.mjs` 为基础，固定主网参数。保持同一区块读取仓位、pending、代币余额及门槛；领取资格由 pending 判断，当前累计资格由本金与门槛判断，不在前端重写发行公式。
+业务代码以已验证的 Sepolia v0.2 `core.mjs`、`app.mjs` 为基础，固定主网参数。保持同一区块读取仓位、pending、代币余额及门槛；交易校验仍以链上状态为准。UI 从一次链上快照出发，按照 v0.2 每 86400 合格秒发行 1 UBIC1 的公式、质押本金和 1000 天纪元截止点，由浏览器每秒推算待领取奖励，不在计时器里请求 RPC。Pending 展示 5 位小数、ETH 钱包余额展示 6 位小数（悬停可看完整精度），取消手动刷新按钮；连接钱包及交易确认后重新同步链上快照。
 
 每次 Deposit 提示未领奖励与计时永久归零；Withdraw 提示退回全部记录本金并放弃未领奖励。三个操作分别调用 `deposit()`、`claim()`、`withdraw()`。Gas、nonce 和最终签名由钱包处理。
 

@@ -1,4 +1,5 @@
 import { readDashboard } from './dashboard.mjs';
+import { estimatePending, fixedAmount } from './pending.mjs';
 import { ADDRESS, RUNTIME_HASH, Wallet, Transactions, amount, depositValue, readPosition } from './core.mjs';
 
 const $ = id => document.getElementById(id);
@@ -11,8 +12,14 @@ $('contract').textContent = ADDRESS;
 $('contract').href = `${explorer}/address/${ADDRESS}`;
 $('runtime').textContent = RUNTIME_HASH;
 function displayAmount(value, digits = 4) {
-  const [whole, fraction = ''] = amount(value).split('.');
-  return `${whole}.${fraction.padEnd(digits, '0')}`;
+  return fixedAmount(value, digits);
+}
+function renderPending() {
+  const pending = position ? estimatePending(position, dashboard, Math.floor(Date.now() / 1000)) : null;
+  $('pending').textContent = pending === null ? '—' : displayAmount(pending, 5);
+  $('claimable').textContent = pending === null ? '连接后查看领取资格' : pending > 0n
+    ? '可领取 · 本地按秒估算，以链上执行结果为准' : '暂无可领取奖励';
+  $('claim').disabled = loading || transactions.busy || transactions.uncertain || pending === null || pending === 0n;
 }
 function status(message, error = false) {
   $('status').textContent = message;
@@ -21,18 +28,17 @@ function status(message, error = false) {
 function render() {
   const locked = loading || transactions.busy || transactions.uncertain;
   $('connect').disabled = loading || transactions.busy;
-  $('connect').textContent = connectedAccount ? `${connectedAccount.slice(0, 6)}…${connectedAccount.slice(-3)} ▾` : 'Connect Wallet ↗';
-  $('refresh').disabled = loading || transactions.busy;
+  $('connect').textContent = connectedAccount ? `${connectedAccount.slice(0, 6)}…${connectedAccount.slice(-4)} ▾` : 'Connect Wallet ↗';
   $('connected-wallet').hidden = !connectedAccount;
   $('full-account').textContent = connectedAccount;
   renderWallets();
   $('deposit').disabled = locked || !position;
-  $('claim').disabled = locked || !position || position.pending === 0n;
   $('withdraw').disabled = locked || !position || position.principal === 0n;
-  $('eth-balance').textContent = dashboard?.ethBalance != null && position ? displayAmount(dashboard.ethBalance) : '—';
+  $('eth-balance').textContent = dashboard?.ethBalance != null && position ? displayAmount(dashboard.ethBalance, 6) : '—';
+  $('eth-balance').title = dashboard?.ethBalance != null && position ? `${amount(dashboard.ethBalance)} ETH` : '';
   $('gap').textContent = position ? amount(position.required > position.principal ? position.required - position.principal : 0n) : '—';
-  for (const key of ['principal', 'pending', 'balance', 'required']) $(key).textContent = position ? (key === 'required' ? amount(position[key]) : displayAmount(position[key], key === 'pending' ? 6 : 4)) : '—';
-  $('claimable').textContent = position ? (position.pending > 0n ? '可领取 · 不受当前累计资格影响' : '暂无可领取奖励') : '连接后查看领取资格';
+  for (const key of ['principal', 'balance', 'required']) $(key).textContent = position ? (key === 'required' ? amount(position[key]) : displayAmount(position[key], 4)) : '—';
+  renderPending();
   $('eligibility').textContent = !position ? '等待有效链上数据' : position.principal >= position.required ? '● 当前达标 · 正在累计奖励' : position.principal === 0n ? '○ 尚未存入本金' : '○ 当前未达标 · 不再累计新奖励';
   renderProtocol();
   $('updated').textContent = position ? `区块 ${BigInt(position.block.number)} · ${new Date(Number(BigInt(position.block.timestamp)) * 1000).toLocaleTimeString('zh-CN')} 快照` : '链上快照 · 未读取';
@@ -41,7 +47,7 @@ function invalidate() {
   version++; identity = undefined; position = undefined; connectedAccount = '';
   $('wallet-feedback').textContent = '';
   if ($('confirmation').open) $('confirmation').close('cancel');
-  status(transactions.uncertain ? '交易结果未知，请先核对钱包历史；刷新不代表交易失败。' : '钱包账户或网络已变化，请重新连接或刷新。', true);
+  status(transactions.uncertain ? '交易结果未知，请先核对钱包历史；刷新不代表交易失败。' : '钱包账户或网络已变化，请重新连接或重新打开页面。', true);
   render();
 }
 function renderProtocol() {
@@ -106,7 +112,7 @@ async function loadProtocol() {
     if (request !== overviewVersion) return;
     dashboard = next; renderProtocol();
   } catch {
-    if (request === overviewVersion) $('protocol-updated').textContent = '读取失败 · 可点击刷新重试';
+    if (request === overviewVersion) $('protocol-updated').textContent = '读取失败 · 重新打开页面后重试';
   }
 }
 async function refresh() {
@@ -143,7 +149,6 @@ async function connectWallet(selected) {
   }
   loading = false; await refresh();
 }
-$('refresh').addEventListener('click', refresh);
 function confirmOperation(kind, value, snapshot) {
   $('confirm-title').textContent = { deposit: '存入ETH', claim: '领取 UBIC1', withdraw: '取回全部本金' }[kind];
   $('confirm-account').textContent = identity.account;
@@ -175,13 +180,15 @@ async function transact(kind) {
     const hash = await operation;
     if (hash) {
       await refresh();
-      status(`交易已在 Mainnet 确认（1 个区块）。${position ? '仓位已更新。' : '仓位暂未更新，请刷新。'}`);
+      status(`交易已在 Mainnet 确认（1 个区块）。${position ? '仓位已更新。' : '仓位暂未更新，请重新加载页面。'}`);
     } else status('已取消操作，未向钱包发送交易。');
   } catch (error) { status(error.message, true); }
   finally { render(); }
 }
 for (const kind of ['deposit', 'claim', 'withdraw']) $(kind).addEventListener('click', () => transact(kind));
 render();
+// This clock updates only the visible estimate; it never polls the chain.
+setInterval(renderPending, 250);
 
 // Tabs only select a view. Sending always uses the existing guarded operation.
 const tabs = [...document.querySelectorAll('[role="tab"]')];
