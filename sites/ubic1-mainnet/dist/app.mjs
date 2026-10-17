@@ -36,7 +36,8 @@ function render() {
   $('withdraw').disabled = locked || !position || position.principal === 0n;
   $('eth-balance').textContent = dashboard?.ethBalance != null && position ? displayAmount(dashboard.ethBalance, 6) : '—';
   $('eth-balance').title = dashboard?.ethBalance != null && position ? `${amount(dashboard.ethBalance)} ETH` : '';
-  $('gap').textContent = position ? amount(position.required > position.principal ? position.required - position.principal : 0n) : '—';
+  $('gap-status').textContent = !position ? '距离达标还差：— ETH' : position.principal >= position.required
+    ? '✓ 已达标' : `距离达标还差：${amount(position.required - position.principal)} ETH`;
   for (const key of ['principal', 'balance', 'required']) $(key).textContent = position ? (key === 'required' ? amount(position[key]) : displayAmount(position[key], 4)) : '—';
   renderPending();
   $('eligibility').textContent = !position ? '等待有效链上数据' : position.principal >= position.required ? '● 当前达标 · 正在累计奖励' : position.principal === 0n ? '○ 尚未存入本金' : '○ 当前未达标 · 不再累计新奖励';

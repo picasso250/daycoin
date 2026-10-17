@@ -4,6 +4,7 @@
   "compatibility_date": "2026-10-16",
   "workers_dev": true,
   "preview_urls": false,
+  "routes": [{ "pattern": "ubi.io99.xyz", "custom_domain": true }],
   "assets": {
     "directory": "./sites/ubic1-mainnet/dist"
   }

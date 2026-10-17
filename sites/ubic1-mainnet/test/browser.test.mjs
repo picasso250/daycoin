@@ -98,6 +98,11 @@ test('desktop/mobile layout, fixed contract, strict Proxy wallet and historical 
     assert.equal(await page.locator('#balance').textContent(), '2.0000');
     assert.match(await page.locator('#eligibility').textContent(), /未达标/);
     assert.equal(await page.locator('#contract').textContent(), ADDRESS);
+    assert.equal(await page.locator('.status-pill').textContent(), 'ETHEREUM MAINNET');
+    assert.equal(await page.locator('meta[name="description"]').getAttribute('content').then(s => s.includes('v0.2')), false);
+    assert.equal(await page.locator('.intro p').textContent().then(s => s.includes('UBI 是理想，UBIC1 是我们的第一次尝试。')), true);
+    assert.equal(await page.locator('.intro p').textContent().then(s => s.includes('没有主人，只有规则。自由加入，自由离开。')), true);
+    assert.equal(await page.locator('.footer-network').getAttribute('href'), `https://etherscan.io/address/${ADDRESS}`);
     await mkdir(new URL('../test-output/', import.meta.url), { recursive: true });
     await page.screenshot({ path: new URL('../test-output/desktop.png', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'), fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -185,7 +190,7 @@ test('wallet picker detects before authorization, displays full address and supp
     assert.equal(await page.locator('#connect').textContent(), '0x1212…1212 ▾');
     assert.deepEqual(await page.locator('#connect').evaluate(el => ({ padding: getComputedStyle(el).paddingLeft, minWidth: getComputedStyle(el).minWidth })), { padding: '12px', minWidth: '0px' });
     assert.equal(await page.locator('#eth-balance').textContent(), '3.000000');
-    assert.equal(await page.locator('#gap').textContent(), '0.1');
+    assert.equal(await page.locator('#gap-status').textContent(), '距离达标还差：0.1 ETH');
     assert.equal(await page.locator('#total-supply').textContent(), '3.0');
     assert.equal(await page.locator('#current-epoch').textContent(), '1');
     assert.equal(await page.locator('#next-epoch').textContent(), new Date(1772800000 * 1000).toISOString().slice(0, 16).replace('T', ' '));
@@ -234,6 +239,7 @@ test('pending ticks locally each second with five decimals and no repeated RPC r
     await page.locator('#connect').click();
     await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('#eth-balance').textContent !== '—');
+    assert.equal(await page.locator('#gap-status').textContent(), '✓ 已达标');
     const first = await page.locator('#pending').textContent();
     assert.match(first, /^\d+\.\d{5}$/);
     const calls = rpcCalls.length;
