@@ -15,6 +15,8 @@ after(async () => { await browser?.close(); });
 async function setup(options = {}) {
   const context = await browser.newContext({ viewport: { width: 1360, height: 1000 } });
   const page = await context.newPage(); const errors = [], rpcCalls = [];
+  let releaseThreshold;
+  const thresholdGate = options.holdThreshold ? new Promise(resolve => { releaseThreshold = resolve; }) : null;
   page.on('pageerror', error => errors.push(error.message));
   await page.route('https://ethereum-rpc.publicnode.com/**', async route => {
     const { method, params } = route.request().postDataJSON(); rpcCalls.push(method); let result;
@@ -29,6 +31,7 @@ async function setup(options = {}) {
     if (method === 'eth_call') {
       const parsed = abi.parseTransaction(params[0]) || overviewAbi.parseTransaction(params[0]);
       const name = parsed.name;
+      if (name === 'requiredDeposit' && thresholdGate) await thresholdGate;
       const values = { positions: [options.activeReward ? BigInt(block.timestamp) : 1n, 100000000000000000n], pending: [options.activeReward ? 0n : 500000000000000000n], balanceOf: [2n * 10n ** 18n], requiredDeposit: [options.activeReward ? 100000000000000000n : 200000000000000000n], totalSupply: [3000000000000000000n], currentEpoch: [options.activeReward ? 0n : 1n], genesisTime: [options.activeReward ? BigInt(block.timestamp) - 3600n : 1600000000n], EPOCH_DURATION: [86400000n] };
       result = (abi.getFunction(name) ? abi : overviewAbi).encodeFunctionResult(name, values[name]);
     }
@@ -67,12 +70,18 @@ async function setup(options = {}) {
   }, { account, chain: CHAIN, code, block, hash, options });
   await page.goto(base);
   await page.evaluate(() => document.fonts.ready);
-  return { page, context, errors, rpcCalls };
+  return { page, context, errors, rpcCalls, releaseThreshold };
 }
-test('deposit defaults to actual 0.1 ETH and stays editable without sending automatically', async () => {
+test('deposit amount defaults to the live on-chain threshold and stays editable', async () => {
   const { page, context, errors } = await setup();
   try {
-    assert.equal(await page.locator('#deposit-amount').inputValue(), '0.1');
+    assert.equal(await page.locator('.test-strip').count(), 0);
+    assert.equal(await page.locator('header').evaluate(el => el.getBoundingClientRect().top), 0);
+    assert.match(await page.locator('#panel-deposit .action-copy > p').first().textContent(), /每天累计 1 枚 UBIC1（按秒计算，需手动领取）/);
+    assert.match(await page.locator('#panel-deposit .action-copy > p').first().textContent(), /未达标不会累计；多存也不会更快/);
+    await page.waitForFunction(() => document.querySelector('#amount-help').textContent.includes('0.2 ETH'));
+    assert.equal(await page.locator('#amount-help').textContent(), '当前发行门槛：0.2 ETH');
+    assert.equal(await page.locator('#deposit-amount').inputValue(), '0.2');
     assert.equal(await page.locator('#deposit-amount').getAttribute('placeholder'), null);
     await page.locator('#connect').click();
     await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
@@ -80,13 +89,29 @@ test('deposit defaults to actual 0.1 ETH and stays editable without sending auto
     assert.equal(await page.evaluate(() => testWallet.sent.length), 0);
     await page.locator('#deposit').click();
     await page.locator('#confirmation').waitFor({ state: 'visible' });
-    assert.ok((await page.locator('#confirm-body').textContent()).includes('0.1 ETH'));
+    assert.ok((await page.locator('#confirm-body').textContent()).includes('0.2 ETH'));
     assert.equal(await page.evaluate(() => testWallet.sent.length), 0);
     await page.locator('#confirmation button[value="cancel"]').click();
     await page.locator('#deposit-amount').fill('0.02');
+    await page.locator('#connect').click();
+    await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
+    await page.waitForFunction(() => !document.querySelector('#deposit').disabled);
     assert.equal(await page.locator('#deposit-amount').inputValue(), '0.02');
     assert.deepEqual(errors, []);
   } finally { await context.close(); }
+});
+
+test('manual input before the chain response is preserved when the threshold arrives', async () => {
+  const { page, context, errors, releaseThreshold } = await setup({ holdThreshold: true });
+  try {
+    assert.equal(await page.locator('#deposit-amount').inputValue(), '0.1');
+    assert.equal(await page.locator('#amount-help').textContent(), '当前发行门槛：读取中…');
+    await page.locator('#deposit-amount').fill('0.07');
+    releaseThreshold();
+    await page.waitForFunction(() => document.querySelector('#amount-help').textContent === '当前发行门槛：0.2 ETH');
+    assert.equal(await page.locator('#deposit-amount').inputValue(), '0.07');
+    assert.deepEqual(errors, []);
+  } finally { releaseThreshold(); await context.close(); }
 });
 
 test('desktop/mobile layout, fixed contract, strict Proxy wallet and historical claim eligibility', async () => {
@@ -240,6 +265,7 @@ test('pending ticks locally each second with five decimals and no repeated RPC r
     await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('#eth-balance').textContent !== '—');
     assert.equal(await page.locator('#gap-status').textContent(), '✓ 已达标');
+    assert.equal(await page.locator('#amount-help').textContent(), '当前发行门槛：0.1 ETH');
     const first = await page.locator('#pending').textContent();
     assert.match(first, /^\d+\.\d{5}$/);
     const calls = rpcCalls.length;

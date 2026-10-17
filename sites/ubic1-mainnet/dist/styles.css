@@ -117,28 +117,6 @@ a:hover {
   margin:auto;
   padding:0 40px
 }
-.test-strip {
-  height:35px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-  font-size:10px;
-  letter-spacing:1.3px;
-  background:#e7eadf;
-  color:#4a5949
-}
-.dot {
-  display:inline-block;
-  width:6px;
-  height:6px;
-  border-radius:50%;
-  background:#638663
-}
-.strip-rule {
-  height:11px;
-  border-left:1px solid #b6bdaf
-}
 header {
   height:112px;
   display:flex;

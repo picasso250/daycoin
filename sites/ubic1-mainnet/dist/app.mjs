@@ -7,6 +7,8 @@ const transactions = new Transactions();
 const providers = [];
 let wallet, identity, position, dashboard, connectedAccount = '', loading = false, version = 0, overviewVersion = 0;
 let detecting = false;
+let depositAmountEdited = false;
+$('deposit-amount').addEventListener('input', () => { depositAmountEdited = true; });
 const explorer = 'https://etherscan.io';
 $('contract').textContent = ADDRESS;
 $('contract').href = `${explorer}/address/${ADDRESS}`;
@@ -58,6 +60,10 @@ function renderProtocol() {
     ['next-epoch', 'nextEpochTime', value => new Date(Number(value) * 1000).toISOString().slice(0, 16).replace('T', ' ')],
   ]) $(id).textContent = dashboard?.[key] != null ? format(dashboard[key]) : '—';
   $('protocol-updated').textContent = dashboard ? `主网区块 ${BigInt(dashboard.block.number)} · 快照` : '链上数据未读取';
+  const threshold = position?.required ?? dashboard?.requiredDeposit;
+  $('amount-help').textContent = threshold != null ? `当前发行门槛：${amount(threshold)} ETH`
+    : dashboard ? '当前发行门槛：暂不可用' : '当前发行门槛：读取中…';
+  if (threshold != null && !depositAmountEdited) $('deposit-amount').value = amount(threshold);
 }
 function renderWallets() {
   $('wallet-list').replaceChildren();
