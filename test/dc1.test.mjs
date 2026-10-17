@@ -65,7 +65,7 @@ async function fixture(t) {
 
 test('DC1 V1 has 18 decimals and only the three intended principal/reward operations', async t => {
   const { token, alice } = await fixture(t);
-  assert.equal(await token.name(), 'DC1');
+  assert.equal(await token.name(), 'DayCoin V1');
   assert.equal(await token.symbol(), 'DC1');
   assert.equal(await token.decimals(), 18n);
   assert.equal(await token.totalSupply(), 0n);
@@ -107,7 +107,7 @@ test('subminimum ETH earns zero, and reaching threshold starts time at that depo
   assert.equal(await token.balanceOf(alice.address), ONE);
 });
 
-test('fractional issuance: half day = 0.5 UBIC; any single eligible second earns tokens', async t => {
+test('fractional issuance: half day = 0.5 DC1; any single eligible second earns tokens', async t => {
   const { token, alice, send, advance } = await fixture(t);
   await send(token.deposit({ value: UNIT }));
   await advance(DAY / 2);
