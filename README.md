@@ -1,3 +1,22 @@
+## DayCoin V1 / DC1（待部署）
+
+**正式命名：** 项目品牌 DayCoin，Solidity 合约 `DayCoinV1`，ERC-20 Name `DayCoin V1`，Symbol `DC1`。口号：*One Coin a Day.*
+
+新版本在 `contracts/DayCoinV1.sol`，从既有 UBIC1 v0.2 逻辑独立复制，仅修改品牌及合约名称；旧源码与所有历史链上合约均不变。**DC1 目前未在主网或测试网部署。**
+
+本地操作（不部署）：
+
+```powershell
+npm ci
+npm run build:dc1
+npm run test:dc1
+npm test
+```
+
+构建产物为 `artifacts/DayCoinV1.json`。通用部署器需要单独选择此 artifact、网络配置并明确传入 `--broadcast` 才会发送交易；当前工作没有执行部署。独立审计与真实钱包验收仍未完成。
+
+---
+
 # UBIC1 · v0.2
 
 UBIC1 是一个不设 Owner、不可升级的 Ethereum 货币发行实验。**当前公开测试站只连接 Sepolia 测试网络，不使用真实主网 ETH。**
