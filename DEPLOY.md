@@ -1,51 +1,55 @@
-# 通用 Ethereum 合约部署
+# DayCoin V1 / DC1 · 部署与核验
 
-**两个参数：网络配置文件 + 已编译 artifact。** 同一个 `scripts/deploy.mjs`、`scripts/verify.mjs` 可用于 UBIC1、UBIC1-v0.2 和后续版本，不按版本复制脚本。
+**现行合约：** `contracts/DayCoinV1.sol`，ERC-20 Name `DayCoin V1`，Symbol `DC1`。
 
-## 预演（默认不签名、不发送）
+- **Ethereum Mainnet（Chain ID 1）：** `0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715`
+- **Sepolia（Chain ID 11155111）：** `0xBB322A88f2ED0EdFd3632825Cf44Bbb62B93Bd26`
+- 公开交易与地址见 [README.md](README.md)；旧 UBIC1 合约与 DC1 互不迁移，旧部署命令不属于现行工作流。
 
-```powershell
-npm run build:v02
-Copy-Item .env.sepolia.example .env.sepolia
-# 编辑 .env.sepolia，只在本地填入 Sepolia 测试钱包私钥。
-npm run deploy -- .env.sepolia artifacts/UBIC1V02.json
-```
-
-预演输出 `CHAIN_ID`、部署地址、编译物创建 Hash、Gas 上限及费用预算。**不会写入部署记录或广播交易。**
-
-网络配置文件使用 `CHAIN_ID`、`RPC_URL`、`PRIVATE_KEY` 和可选 `MAX_DEPLOY_FEE_ETH`（默认 0.02 ETH）。RPC 必须使用 HTTPS；仅本机隔离模拟链允许 loopback HTTP。实际链的 `eth_chainId` 必须和环境文件一致，错链拒绝。建议按网络维护 `.env.sepolia`、`.env.mainnet`，而不按合约版本维护。现有 v0.1 的 `.env`、旧主网配置和历史入口保持不动；它们不自动兼容本新格式。
-
-## 部署（只有明确授权时才执行）
+## 构建（不会广播）
 
 ```powershell
-npm run deploy -- .env.sepolia artifacts/UBIC1V02.json --broadcast
+npm run build
+npm run test:dc1
+npm test
 ```
 
-**`--broadcast` 才会签署并发送部署交易。** 在运行之前必须人工核对预演显示的 Chain ID、artifact、创建 Hash、部署钱包与预估费用。请勿把真实钱包私钥发给他人或提交 Git。
+默认构建产物：`artifacts/DayCoinV1.json`。编译器 Solidity 0.8.37，EVM Shanghai，Optimizer runs 200。部署产物基准 Creation Hash 为：
 
-部署工具使用与网络和 artifact 创建 Hash 绑定的独立记录，保存到 `deployments/`（已被 Git 忽略）。部署进程先独占预留记录，签名后先保存交易 Hash，再发送交易；如果广播响应丢失，**不可删除记录直接重跑**。请优先凭记录 Hash 核对链上状态。
+`0xd3888c5525657300e00c91245fcc9fdfde4aebfced36a92639522499362532f6`
 
-## 核对链上的确切代码（只读）
+如果以后重新编译得出不同 Creation Hash，先追查依赖、源码与编译环境，不要直接发布。
+
+## 预演命令格式（供以后新版本参考）
 
 ```powershell
-npm run verify -- .env.sepolia artifacts/UBIC1V02.json
+npm run deploy -- .env.sepolia artifacts/DayCoinV1.json
+npm run deploy -- .env.mainnet artifacts/DayCoinV1.json
 ```
 
-核验不需要私钥（但需要环境文件中 `CHAIN_ID`、`RPC_URL`），也不会广播。它检查：
-- 记录与所选 artifact 的创建 Hash 相符，创建交易 `chainId`、`from`、`nonce`、`to=null`、`value=0` 和完整创建字节码一致；
-- 创建交易回执与预测合约地址一致；
-- 读取当前链上运行时代码，与 artifact 逐字节核对 **除了 Solidity 编译器标记的 immutable 槽位**；同一个 immutable 在多个位置的写入值也必须一致。
+配置文件使用 `CHAIN_ID`、`RPC_URL`、`PRIVATE_KEY` 和可选 `MAX_DEPLOY_FEE_ETH`；`.env.*` 必须只保存在本机（`.gitignore` 已排除）。预演会检查真实链 ID、Gas 估算、费用预算和余额，但**不会广播**。**上述两个网络已有 DC1 Journal，因此现在重复预演会因“部署记录已存在”被拒绝，这是正常安全保护。**
 
-Solidity 的 immutable 会在构造时写入运行时代码，因此通用核验器不能只比较静态 runtime Hash。它也**不能仅凭字节码证明每个 immutable 的业务含义**：UBIC1-v0.2 还须检查 `genesisTime` 等于部署区块时间、18 decimals、初始供应量和每日发行量；这属于版本专用协议验证，而不是部署程序的网络责任。
+**重要：DC1 已经部署到上述两个网络。不要再执行同一版本的部署广播来“重试”或“验证”。** 重复部署会创建不同地址、引发用户混淆。
 
-## 测试与历史兼容
+## 实际部署逻辑（历史记录；不必重跑）
+
+部署器仅在明确添加 `--broadcast` 时签名发送交易。它采用独立 Journal（`deployments/<chain>-DayCoinV1-<creation-hash>.json`）：
+1. 先排他性预留记录，再签名；
+2. 在发送前保存准确交易哈希及 Nonce；
+3. 成功后记录实际合约地址和运行时代码哈希；
+4. 超时不会自动增加 Gas、替换 Nonce 或二次部署。
+
+**不要删除或提交含有隐私信息的本地部署记录，不要为绕过“已存在记录”的防护而删除 Journal。请单独备份 Journal 和部署交易哈希。** Journal 不含私钥，但仍应避免把本机配置一并公开。
+
+## 核验现有部署（只读）
 
 ```powershell
-npm run test:deploy
-npm run test:v02
-npm --prefix sites/ubic1-sepolia test
+npm run verify -- .env.mainnet artifacts/DayCoinV1.json
+npm run verify -- .env.sepolia artifacts/DayCoinV1.json
 ```
 
-本地/CI 在隔离 Ganache 模拟链测试通用部署器。旧的按网络分叉部署脚本已删除；所有新合约使用统一的 `npm run deploy -- <env> <artifact>`。v0.2 Sepolia 前端已经绑定独立核验的测试网合约，不会发送主网交易。
+核验读取本地 Journal 和链上回执，比较创建交易字节码与产物、预期地址，以及除 Solidity `immutable` 槽位外的运行时字节码。对 `genesisTime` 等 `immutable` 的业务含义，还须单独读取链上变量检查。字节码核验不等于第三方安全审计。
 
-真实 Sepolia 上使用真实钱包进行 Deposit → Claim → Withdraw 留给人工单独操作；部署工具不参与该测试。
+## 历史版本与测试
+
+旧 `UBIC1.sol` / `UBIC1V02.sol` 及其历史测试目前保留作回归与审查参考，**不是现行部署入口**。使用 `npm run build` 始终只构建 DC1；旧版编译需显式执行 `npm run build:v02` 等命令。旧网页在 `sites/ubic1-*`，仍可能指向旧合约；请勿误作 DC1 官网。之后如需删除历史源码，应同步重构编译辅助程序、测试、文档链接和 CI，避免破坏验证能力。

@@ -1,23 +1,26 @@
-## DayCoin V1 / DC1（待部署）
+# DayCoin V1 / DC1 · Ethereum Mainnet
 
-**正式命名：** 项目品牌 DayCoin，Solidity 合约 `DayCoinV1`，ERC-20 Name `DayCoin V1`，Symbol `DC1`。口号：*One Coin a Day.*
+**当前正式合约源码：** [`contracts/DayCoinV1.sol`](contracts/DayCoinV1.sol)。品牌 DayCoin，ERC-20 Name `DayCoin V1`，Symbol `DC1`。口号：*One Coin a Day.*
 
-新版本在 `contracts/DayCoinV1.sol`，从既有 UBIC1 v0.2 逻辑独立复制，仅修改品牌及合约名称；旧源码与所有历史链上合约均不变。**DC1 目前未在主网或测试网部署。**
+**正式主网：** [`0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715`](https://etherscan.io/address/0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715)，Chain ID **1**，部署交易 [`0x868a542a…549e9155`](https://etherscan.io/tx/0x868a542a0953ecf40458b7750d3b4082a5e74e551a437d903c01ac9e549e9155)。
 
-本地操作（不部署）：
+**DC1 Sepolia：** [`0xBB322A88f2ED0EdFd3632825Cf44Bbb62B93Bd26`](https://sepolia.etherscan.io/address/0xBB322A88f2ED0EdFd3632825Cf44Bbb62B93Bd26)，Chain ID **11155111**。
+
+合约源自历史 UBIC1 v0.2，仅调整 Solidity 合约名及 ERC-20 名称和符号，不改变发行和存提款逻辑。**旧合约是独立历史实验，切勿使用旧 artifact 代替 DC1 部署。** 代码核验通过不等于第三方安全审计；真实钱包 Deposit → Claim → Withdraw 仍需用户自行验收。
+
+本地默认构建与测试（不签名、不部署）：
 
 ```powershell
-npm ci
-npm run build:dc1
+npm run build
 npm run test:dc1
 npm test
 ```
 
-构建产物为 `artifacts/DayCoinV1.json`。通用部署器需要单独选择此 artifact、网络配置并明确传入 `--broadcast` 才会发送交易；当前工作没有执行部署。独立审计与真实钱包验收仍未完成。
+构建产物为 `artifacts/DayCoinV1.json`；主网和测试网部署记录在本地忽略目录 `deployments/`，**请妥善备份，不要为了重新部署而删除**。网络、部署与只读验证参见 [DEPLOY.md](DEPLOY.md)。
 
 ---
 
-# UBIC1 · v0.2
+## 历史资料：UBIC1 v0.2（不是 DC1）
 
 UBIC1 是一个不设 Owner、不可升级的 Ethereum 货币发行实验。**当前公开测试站只连接 Sepolia 测试网络，不使用真实主网 ETH。**
 
@@ -40,14 +43,16 @@ npm test
 npm --prefix sites/ubic1-sepolia test
 ```
 
-## 部署与网站
+## 链上核验与历史网站
 
-所有网络与合约统一使用两个参数的 [通用部署器](DEPLOY.md)，不再为每版单独复制脚本：
+当前 DC1 已部署，**不要重复执行部署**。可以通过通用 [只读核验器](DEPLOY.md) 检查现有合约：
 
 ```powershell
-npm run deploy -- .env.sepolia artifacts/UBIC1V02.json      # 仅预演
-npm run verify -- .env.sepolia artifacts/UBIC1V02.json     # 只读字节码核对
+npm run verify -- .env.mainnet artifacts/DayCoinV1.json
+npm run verify -- .env.sepolia artifacts/DayCoinV1.json
 ```
+
+这些命令需要本地 `deployments/` 中的原始 Journal。历史 UBIC1 的部署命令和测试仅供研究，不应用于新的 DC1 发行。
 
 当前前端位于 `sites/ubic1-sepolia/dist`，`wrangler.jsonc` 直接将其发布为现有的 `ubic1-sepolia` Cloudflare Worker。网站内容不包含私钥；只通过用户自己的 EIP-1193 钱包签名。本地预览：`npm --prefix sites/ubic1-sepolia run dev`，打开 `http://127.0.0.1:5173`。实现边界与测试见 [前端说明](sites/ubic1-sepolia/README.md)。
 
@@ -59,4 +64,4 @@ npx wrangler deploy --config wrangler.jsonc
 
 ## 长期原则
 
-UBIC 是协议家族名，UBIC1 是第一代实验。每版自愿选择、无管理员特权、名称不赋予权威。工程上实行**最小充分责任**：严格保护明确承诺的安全边界，不为了防止所有用户独立授权行为而维护复杂的全局事务状态。
+**DayCoin** 是现行项目品牌，**DC1** 是已上主网的第一代独立合约；历史 UBIC1 v0.1、v0.2 不会自动升级或迁移到 DC1。每版自愿选择、无管理员特权，名称不赋予权威。工程上实行**最小充分责任**。
