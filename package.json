@@ -10,7 +10,9 @@
     "test:v02": "node --test test/ubic-v02.test.mjs",
     "deploy": "node scripts/deploy.mjs",
     "verify": "node scripts/verify.mjs",
-    "test:deploy": "node --test test/generic-deployment.test.mjs"
+    "test:deploy": "node --test test/generic-deployment.test.mjs",
+    "build:dc1": "node scripts/compile-dc1.mjs",
+    "test:dc1": "node --test test/dc1.test.mjs"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.4.0"
