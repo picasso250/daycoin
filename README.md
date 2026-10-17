@@ -1,4 +1,4 @@
-# DayCoin · One Coin a Day.
+# DayCoin · One Coin One Day
 
 DayCoin V1 (DC1) is a minimal Ethereum experiment in continuous monetary issuance. It is an independent, non-upgradeable ERC-20 contract, not guaranteed income or a promise of investment returns.
 
