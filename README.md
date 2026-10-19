@@ -17,6 +17,12 @@ An ETH deposit gives an *address*, not a verified human, eligibility to accrue o
 
 There is no owner, proxy upgrade, admin mint, or admin pause. This is not a security audit; asset value is not guaranteed.
 
+## Roadmap
+
+- **DC1 — live:** 1 DC1/day per eligible ETH-backed address; no personhood check.
+- **DC2 — research only:** Move toward 1 coin/day per human. Explore refundable ETH sponsorship (sponsor keeps principal; beneficiary receives coins) and no-deposit eligibility via established GitHub accounts, Google sign-in, or personhood proofs.
+- **Approach:** Accept imperfect, overlapping identity checks and some Sybil claims; measure and correct them openly. Prioritize access over perfect verification. DC1 stays unchanged.
+
 ## Development (local only)
 
 - npm run build — compile DC1, creates artifacts/DayCoinV1.json
