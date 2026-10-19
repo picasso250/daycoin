@@ -5,16 +5,24 @@ import { chromium } from 'playwright';
 import { overviewAbi } from '../dist/dashboard.mjs';
 import { ADDRESS, CHAIN, abi } from '../dist/core.mjs';
 
-const base = process.env.PREVIEW_URL || 'http://127.0.0.1:5174';
+import { startPreview } from '../preview.mjs';
+const server = await startPreview(0);
+const base = `http://127.0.0.1:${server.address().port}`;
 const code = (await readFile(new URL('./fixtures/runtime.hex', import.meta.url), 'utf8')).trim();
 const account = '0x' + '12'.repeat(20), hash = '0x' + 'ab'.repeat(32);
 const block = { number: '0x100', timestamp: '0x' + Math.floor(Date.now() / 1000).toString(16), hash: '0x' + 'cd'.repeat(32) };
 let browser;
 before(async () => { browser = await chromium.launch({ ...(process.platform === 'win32' ? { channel: 'msedge' } : {}), headless: true }); });
-after(async () => { await browser?.close(); });
+after(async () => { await browser?.close(); await new Promise(resolve => server.close(resolve)); });
 async function setup(options = {}) {
   const context = await browser.newContext({ viewport: { width: 1360, height: 1000 } });
   const page = await context.newPage(); const errors = [], rpcCalls = [];
+  const headers = await readFile(new URL('../dist/_headers', import.meta.url), 'utf8');
+  const csp = headers.match(/Content-Security-Policy: (.+)/)[1];
+  await page.route(base + '/**', async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, headers: { ...response.headers(), 'content-security-policy': csp } });
+  });
   let releaseThreshold;
   const thresholdGate = options.holdThreshold ? new Promise(resolve => { releaseThreshold = resolve; }) : null;
   page.on('pageerror', error => errors.push(error.message));
@@ -68,7 +76,7 @@ async function setup(options = {}) {
     window.testWallet.emit = event => events.get(event)?.();
     if (!options.noWallet) window.addEventListener('eip6963:requestProvider', () => window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: { info: { name: 'Test EIP-1193' }, provider } })));
   }, { account, chain: CHAIN, code, block, hash, options });
-  await page.goto(base);
+  await page.goto(base + (options.lang === 'en' ? '/' : '/zh/'));
   await page.evaluate(() => document.fonts.ready);
   return { page, context, errors, rpcCalls, releaseThreshold };
 }
@@ -285,6 +293,102 @@ test('connection rejection stays in menu with a retryable wallet choice', async 
     await page.waitForFunction(() => document.querySelector('#wallet-feedback').textContent.includes('已取消连接'));
     assert.equal(await page.locator('#wallet-menu').isVisible(), true);
     assert.equal(await page.locator('.wallet-choice').isEnabled(), true);
-    assert.equal(await page.locator('#connect').textContent(), 'Connect Wallet ↗');
+    assert.equal(await page.locator('#connect').textContent(), '连接钱包 ↗');
+  } finally { await context.close(); }
+});
+
+for (const kind of ['deposit', 'claim', 'withdraw']) test(`English ${kind}: exact transaction, cancellation, disclosures and responsive layout`, async () => {
+  const { page, context, errors } = await setup({ lang: 'en' });
+  try {
+    assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+    await page.locator('#connect').click();
+    await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
+    await page.waitForFunction(() => !document.querySelector('#claim').disabled);
+    assert.match(await page.locator('#eligibility').textContent(), /Below threshold/);
+    await page.locator('#deposit-amount').fill('0.000000000000000001');
+    await page.locator('#tab-' + kind).click();
+    await page.locator('#' + kind).click();
+    await page.locator('#confirmation').waitFor({ state: 'visible' });
+    assert.equal(await page.evaluate(() => testWallet.sent.length), 0);
+    if (kind === 'deposit') assert.match(await page.locator('#confirm-warning').textContent(), /permanently forfeits.*0.5 DC1.*cancel and Claim first/s);
+    if (kind === 'withdraw') {
+      assert.match(await page.locator('#confirm-warning').textContent(), /does not automatically Claim.*forfeited/s);
+      assert.match(await page.locator('#confirm-body').textContent(), /all recorded principal: 0.1 ETH/);
+    }
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      assert.equal(await page.locator('.language-switch').isVisible(), true);
+      assert.equal(await page.locator('#confirmation').evaluate(el => el.scrollWidth <= el.clientWidth), true);
+      await page.screenshot({ path: new URL(`../test-output/en-${kind}-${width}.png`, import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'), fullPage: true });
+    }
+    assert.doesNotMatch((await page.locator('body').textContent()).replace('中文', ''), /\p{Script=Han}/u);
+    await page.locator('#confirmation button[value="cancel"]').click();
+    assert.equal(await page.evaluate(() => testWallet.sent.length), 0);
+    await page.locator('#' + kind).click();
+    await page.getByRole('button', { name: 'I understand. Continue to wallet' }).click();
+    await page.waitForFunction(() => document.querySelector('#status').textContent.includes('Transaction confirmed on Mainnet'));
+    const sent = await page.evaluate(() => testWallet.sent);
+    assert.equal(sent.length, 1);
+    assert.deepEqual(sent[0], { from: account, to: ADDRESS, chainId: CHAIN, data: abi.encodeFunctionData(kind), value: kind === 'deposit' ? '0x1' : '0x0' });
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
+for (const [options, expected] of [
+  [{ chain: '0xaa36a7' }, 'Switch your wallet to Ethereum Mainnet'],
+  [{ noWallet: true }, 'No wallet detected'],
+  [{ reject: true }, 'Connection cancelled'],
+  [{ fail: true }, 'Transaction outcome unknown'],
+]) test(`English wallet error: ${expected}`, async () => {
+  const { page, context, errors } = await setup({ lang: 'en', ...options });
+  try {
+    await page.locator('#connect').click();
+    if (!options.noWallet) await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
+    if (options.fail) {
+      await page.waitForFunction(() => !document.querySelector('#claim').disabled);
+      await page.locator('#tab-claim').click(); await page.locator('#claim').click();
+      await page.getByRole('button', { name: 'I understand. Continue to wallet' }).click();
+    }
+    await page.waitForFunction(text => document.body.textContent.includes(text), expected);
+    for (const kind of ['deposit', 'claim', 'withdraw']) assert.equal(await page.locator('#' + kind).isDisabled(), true);
+    assert.equal(await page.evaluate(() => testWallet.sent.length), options.fail ? 1 : 0);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
+test('English amount validation and identity change never send a transaction', async () => {
+  const { page, context, errors } = await setup({ lang: 'en' });
+  try {
+    await page.locator('#connect').click(); await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
+    await page.waitForFunction(() => !document.querySelector('#deposit').disabled);
+    await page.locator('#deposit-amount').fill('1e3'); await page.locator('#deposit').click();
+    assert.match(await page.locator('#status').textContent(), /positive ETH amount/);
+    await page.locator('#tab-withdraw').click(); await page.locator('#withdraw').click();
+    await page.locator('#confirmation').waitFor({ state: 'visible' });
+    await page.evaluate(() => testWallet.emit('accountsChanged'));
+    await page.locator('#confirmation').waitFor({ state: 'hidden' });
+    assert.match(await page.locator('#status').textContent(), /Operation cancelled/);
+    assert.equal(await page.locator('#deposit').isDisabled(), true);
+    assert.equal(await page.evaluate(() => testWallet.sent.length), 0);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
+test('language links preserve page and anchor without wallet authorization', async () => {
+  const { page, context } = await setup({ lang: 'en' });
+  try {
+    await page.goto(base + '/#protocol');
+    await page.locator('.language-switch').click();
+    assert.equal(page.url(), base + '/zh/#protocol');
+    assert.equal(await page.evaluate(() => testWallet.authorizations), 0);
+    for (const slug of ['whitepaper', 'manifesto']) {
+      await page.goto(base + '/' + slug + '#section-3');
+      await page.locator('.language-switch').click();
+      assert.equal(page.url(), base + '/zh/' + slug + '#section-3');
+      assert.equal(await page.locator('#section-3').count(), 1);
+      await page.locator('.language-switch').click();
+      assert.equal(page.url(), base + '/' + slug + '#section-3');
+    }
   } finally { await context.close(); }
 });

@@ -14,3 +14,7 @@ deployments/
 sites/daycoin-mainnet/dist/whitepaper.html
 sites/daycoin-mainnet/dist/whitepaper.pdf
 sites/daycoin-mainnet/dist/whitepaper-assets/
+
+# Generated bilingual pages and documents
+sites/daycoin-mainnet/dist/zh/
+sites/daycoin-mainnet/dist/manifesto.html

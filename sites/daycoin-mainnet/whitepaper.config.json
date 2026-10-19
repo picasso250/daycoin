@@ -1,4 +1,11 @@
 {
-  "source": "../../DayCoin_Whitepaper_v0.2.md",
+  "sources": {
+    "en": "../../DayCoin_Whitepaper_v0.2.en.md",
+    "zh-CN": "../../DayCoin_Whitepaper_v0.2.md"
+  },
+  "manifestos": {
+    "en": "../../Manifesto.en.md",
+    "zh-CN": "../../宣言.md"
+  },
   "repository": "https://github.com/picasso250/daycoin/blob/main/"
 }

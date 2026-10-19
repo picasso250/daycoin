@@ -391,3 +391,6 @@ hr {
     margin: 6mm 0;
   }
 }
+
+header nav { flex-wrap:wrap; }
+@media(max-width:600px) { header { flex-wrap:wrap; gap:12px; } header nav { gap:12px; } }

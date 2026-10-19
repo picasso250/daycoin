@@ -637,7 +637,7 @@ nav {
 nav>a {
   display:none
 }
-nav>a[href="/whitepaper"] { display:inline; font-size:11px; }
+nav>a[href$="/whitepaper"], nav>a.language-switch { display:inline; font-size:11px; }
 header { flex-wrap:wrap; height:auto; min-height:90px; gap:12px; padding-block:18px; }
 button.dark {
   min-width:130px;
@@ -1102,3 +1102,15 @@ header #connect { min-width:0; padding:11px 12px; white-space:nowrap; }
  .card-top { gap:12px; flex-wrap:wrap; }
  #wallet-menu { padding:24px; }
 }
+
+/* Shared bilingual layout: longer English copy can wrap without hiding language access. */
+header nav { flex-wrap:wrap; gap:18px; }
+.intro > div:first-child { max-width:660px; }
+.intro-stamp { flex-shrink:0; }
+.mission { max-width:800px; margin:0 0 36px; line-height:1.9; }
+.mission h2 { font-size:20px; }
+.mission p { color:var(--muted); font-size:13px; }
+.mission a { color:var(--green); text-decoration:underline; }
+.mission .action-warning { color:#855020; }
+.position-metrics > *, .action-content > * { min-width:0; }
+@media(max-width:700px) { header nav { gap:12px; } }

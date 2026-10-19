@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f3ee">
+  <meta name="description" content="DC1 · Ethereum Mainnet。达标期间按秒累计，每日发行 1 DC1。自主领取奖励，随时取回全部记录本金。">
+  <title>DayCoin V1 (DC1) — One Coin One Day</title>
+  <link rel="stylesheet" href="/styles.css"><script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<div class="shell">
+  <header><a class="brand" href="{{home}}" aria-label="DC1 首页"><span class="brand-mark">D<span>1</span></span><span>DayCoin<span class="brand-one"> V1</span></span></a><nav><a href="{{home}}whitepaper">Whitepaper</a><a href="#protocol">Protocol</a><a href="https://etherscan.io/address/0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715" target="_blank" rel="noopener noreferrer">Contract ↗</a><button id="connect" class="dark" aria-haspopup="dialog" aria-controls="wallet-menu">Connect Wallet <span>↗</span></button><a class="language-switch" href="{{other}}" lang="{{otherLang}}" hreflang="{{otherLang}}">{{otherLabel}}</a></nav></header>
+  <main>
+    <section class="intro"><div><div class="eyebrow">A FIRST ATTEMPT AT EVERYDAY ISSUANCE</div><h1>One Coin<br><em>One Day</em></h1><p>UBI 是远景，DC1 是从今天开始的实验。<br>没有主人，只有规则。自由加入，自由离开。</p></div><div class="intro-stamp"><span class="stamp-number">1</span><span>DC1 / DAY</span><small>按秒累计 · 达标期间</small></div></section>
+    <section class="mission"><h2>我们的理想：每人每天一枚。</h2><p>DC1 尚未实现这一理想：它按达标地址发行，不识别自然人。一人可以控制多个地址，资本优势仍然存在。</p><p>自由是原则，平等是目标，实验是方法。</p><p><a href="{{home}}manifesto">阅读宣言</a> · <a href="https://github.com/picasso250/daycoin">开源代码</a></p><p class="action-warning">这是未经独立安全审计的实验。代币可能没有购买力、流动性或长期需求；参与不保证投资回报，本金也面临合约与账户风险。</p></section>
+    <section class="position-card" aria-labelledby="position-title">
+      <div class="card-top"><div class="eyebrow" id="position-title">01 / YOUR POSITION</div><span class="status-pill">ETHEREUM MAINNET</span></div>
+      <div class="position-body">
+        <div class="pending-main"><div class="metric-label">待领取奖励 <span>Pending DC1</span></div><div class="reward-number"><span id="pending">—</span><span class="unit">DC1</span></div><p class="issuance-caption">达标期间每天累计 1 DC1 · 按秒实时估算</p><p id="claimable">连接后查看领取资格</p></div>
+        <div class="position-metrics">
+          <div class="metric"><span class="metric-label">钱包 ETH 余额</span><strong><span id="eth-balance">—</span> <small>ETH</small></strong><span class="hint">钱包中的原生 ETH</span></div>
+          <div class="metric"><span class="metric-label">可退本金</span><strong><span id="principal">—</span> <small>ETH</small></strong><span class="hint">合约内记录的全部本金</span></div>
+          <div class="metric"><span class="metric-label">已持有 DC1</span><strong><span id="balance">—</span> <small>DC1</small></strong><span class="hint">当前账户的代币余额</span></div>
+          <div class="metric"><span class="metric-label">当前发行门槛</span><strong><span id="required">—</span> <small>ETH</small></strong><span class="hint">本金达标时持续累计</span></div>
+        </div>
+        <div class="qualification"><p id="eligibility">发行资格：—</p><p id="gap-status">距离达标还差：— ETH</p></div>
+        <div class="position-start"><span id="updated">链上快照 · 未读取</span></div>
+      </div>
+      <div class="action-area">
+        <div class="action-tabs" role="tablist" aria-label="选择操作"><button id="tab-deposit" class="action-tab selected" role="tab" aria-selected="true" aria-controls="panel-deposit" data-action="deposit">Deposit <span>存入</span></button><button id="tab-claim" class="action-tab" role="tab" aria-selected="false" aria-controls="panel-claim" tabindex="-1" data-action="claim">Claim <span>领取</span></button><button id="tab-withdraw" class="action-tab" role="tab" aria-selected="false" aria-controls="panel-withdraw" tabindex="-1" data-action="withdraw">Withdraw <span>取回</span></button></div>
+        <section id="panel-deposit" role="tabpanel" aria-labelledby="tab-deposit" class="action-content"><div class="action-copy"><h2>让第一天开始。</h2><p>存入 ETH，达到当前门槛后，每天累计 1 枚 DC1（按秒计算，需手动领取）。未达标不会累计；多存也不会更快。</p><p class="action-warning">每次 Deposit 都会让未领取奖励和计时永久归零。想保留奖励，请先 Claim。</p></div><div class="action-controls"><label for="deposit-amount">存入金额 <span>ETH</span></label><div class="amount-field"><input id="deposit-amount" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="0.1" aria-describedby="amount-help"><span>ETH</span></div><small id="amount-help">当前发行门槛：读取中…</small><button id="deposit" class="primary" disabled>存入 · Deposit <span>↗</span></button></div></section>
+        <section id="panel-claim" role="tabpanel" aria-labelledby="tab-claim" class="action-content" hidden><div class="action-copy"><h2>领取，不必离开。</h2><p>将已累计的奖励领取为 DC1，本金保持不变。无需等待满一天；当前不再达标，也可领取过去累计的奖励。</p></div><div class="action-controls"><div class="action-summary"><span class="tiny-sun" aria-hidden="true">✳</span><p>按合格时间发行<br><small>领取金额以交易执行时的链上结果为准</small></p></div><button id="claim" class="primary" disabled>领取 · Claim <span>↗</span></button></div></section>
+        <section id="panel-withdraw" role="tabpanel" aria-labelledby="tab-withdraw" class="action-content" hidden><div class="action-copy"><h2>自由离开，取回本金。</h2><p>随时取回全部记录本金，没有等待期，不支持部分提款。已持有的 DC1 保留。</p><p class="action-warning">Withdraw 会放弃全部未领取奖励。想保留奖励，请先 Claim，再取回本金。</p></div><div class="action-controls"><div class="action-summary"><span class="exit-symbol" aria-hidden="true">↗</span><p>全部本金，一次取回<br><small>退款不依赖当前是否达标</small></p></div><button id="withdraw" class="primary" disabled>全部取回 · Withdraw <span>↗</span></button></div></section>
+        <p class="gas-note">本金不是购买代币的费用。交易 Gas 由钱包另行支付。<span>请在钱包中核对账户、网络与金额。</span></p>
+      </div>
+    </section>
+    <div class="statusline"><p id="status" role="status" aria-live="polite">连接钱包后读取 Ethereum Mainnet 链上数据。</p><a id="transaction" target="_blank" rel="noopener noreferrer" hidden>查看交易 ↗</a></div>
+    <section class="protocol" id="protocol"><div class="section-heading"><div><div class="eyebrow">02 / PROTOCOL</div><h2>规则公开，选择自由。</h2></div><span id="protocol-updated">正在读取主网数据…</span></div><div class="protocol-grid">
+      <div><span class="metric-label">DC1 Total Supply</span><strong id="total-supply">—</strong><small>总供应量 · DC1</small></div>
+      <div><span class="metric-label">Current Epoch</span><strong id="current-epoch">—</strong><small>当前纪元 · 从 0 开始</small></div>
+      <div><span class="metric-label">Required Deposit</span><strong><span id="protocol-required">—</span> <small>ETH</small></strong><small>当前发行门槛 · 每千日增加 0.1 ETH</small></div>
+      <div><span class="metric-label">Next Threshold Change</span><strong id="next-epoch">—</strong><small>下一次门槛变化时间 · UTC</small></div>
+    </div></section>
+    <section class="principles"><div><span>01</span><h3>本金与奖励，各自独立。</h3><p>门槛不足也可取回全部本金。Withdraw 不自动领取奖励，未领取部分将被放弃。智能合约钱包须能接收 ETH，才能取回本金。</p></div><div><span>02</span><h3>每次存入，重新计时。</h3><p>Deposit 包括追加本金，都会清空未领取奖励。Claim 后已持有的代币不会因此丢失；本金多少不改变每日发行速率。</p></div><div><span>03</span><h3>没有管理员，没有特权。</h3><p>合约没有 owner、升级或暂停入口。门槛自部署起每千日增加 0.1 ETH；当前失格不影响领取此前累计的奖励。</p></div></section>
+    <details class="contract-details"><summary>Contract & verification <span>固定合约与验证信息 ＋</span></summary><dl><dt>Ethereum Mainnet · Chain ID 1</dt><dd><a id="contract" target="_blank" rel="noopener noreferrer"></a></dd><dt>Runtime Hash · Keccak-256</dt><dd id="runtime"></dd></dl><p>交易前核对网络、账户及运行时代码。仓位初值来自 Ethereum PublicNode；待领取奖励依据合约发行规则在本地按秒估算，实际 Claim 金额以链上执行为准。</p></details>
+  </main>
+  <footer><a class="footer-brand" href="{{home}}">DC1</a><p>代码不可篡改，制度可以演化。<br><span>One address is not necessarily one person.</span></p><a class="footer-network" href="https://etherscan.io/address/0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715" target="_blank" rel="noopener noreferrer" aria-label="在 Etherscan 查看 Ethereum Mainnet 合约">Ethereum Mainnet ↗</a></footer>
+</div>
+<dialog id="wallet-menu" aria-labelledby="wallet-title">
+  <div class="wallet-menu-heading"><div><div class="eyebrow">YOUR WALLET / ETHEREUM MAINNET</div><h2 id="wallet-title">连接你的钱包</h2></div><button id="wallet-close" aria-label="关闭钱包菜单">×</button></div>
+  <div id="connected-wallet" hidden><span class="metric-label">当前连接账户</span><p id="full-account" class="mono"></p><button id="copy-address">复制地址</button><p class="wallet-switch-label">切换钱包</p></div>
+  <p id="wallet-feedback" role="status" aria-live="polite"></p>
+  <div id="wallet-list"></div>
+  <p class="wallet-menu-note">仅在选择钱包后请求授权。请在钱包内确认连接账户。</p>
+</dialog>
+<dialog id="confirmation"><form method="dialog"><div class="eyebrow">CONFIRM TRANSACTION / ETHEREUM MAINNET</div><h2 id="confirm-title"></h2><p id="confirm-account" class="mono"></p><p id="confirm-body"></p><p id="confirm-warning" class="warning"></p><p class="dialog-note">这是主网交易，使用真实 ETH。最终金额与 Gas 以钱包确认页为准。</p><div class="dialog-actions"><button value="cancel">取消</button><button value="confirm" class="dark">我已了解，继续到钱包</button></div></form></dialog>
+</body></html>

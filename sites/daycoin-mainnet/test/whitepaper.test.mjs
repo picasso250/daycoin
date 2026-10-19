@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { chromium } from "playwright";
 import { startPreview } from "../preview.mjs";
 
-test("whitepaper: source, navigation, math, local resources and responsive layout", async () => {
+for (const lang of ['en', 'zh-CN']) test(`${lang}: whitepaper source, navigation, math, local resources and responsive layout`, async () => {
   const server = await startPreview(0);
   const browser = await chromium.launch();
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -14,9 +14,10 @@ test("whitepaper: source, navigation, math, local resources and responsive layou
       await readFile(new URL("../whitepaper.config.json", import.meta.url)),
     );
     const source = await readFile(
-      new URL("../" + config.source, import.meta.url),
+      new URL("../" + config.sources[lang], import.meta.url),
       "utf8",
     );
+    const prefix = lang === 'en' ? '' : '/zh';
     const page = await browser.newPage();
     const requests = [],
       errors = [];
@@ -39,7 +40,7 @@ test("whitepaper: source, navigation, math, local resources and responsive layou
     });
     for (const width of [1440, 390, 320]) {
       await page.setViewportSize({ width, height: 1000 });
-      await page.goto(base + "/whitepaper", { waitUntil: "networkidle" });
+      await page.goto(base + prefix + "/whitepaper", { waitUntil: "networkidle" });
       await page.evaluate(() => document.fonts.ready);
       assert.equal(
         await page
@@ -85,7 +86,7 @@ test("whitepaper: source, navigation, math, local resources and responsive layou
       );
       await page.screenshot({
         path: new URL(
-          `../test-output/whitepaper-${width}.png`,
+          `../test-output/whitepaper-${lang}-${width}.png`,
           import.meta.url,
         ).pathname.replace(/^\/(\w:)/, "$1"),
         fullPage: false,
@@ -93,7 +94,7 @@ test("whitepaper: source, navigation, math, local resources and responsive layou
       if (width < 800) await page.locator("aside summary").click();
       await page.locator("aside a").last().click();
       assert.ok(
-        decodeURIComponent(new URL(page.url()).hash).includes("附录-b"),
+        decodeURIComponent(new URL(page.url()).hash).includes("section-30"),
       );
       assert.ok(await page.locator("article h2").last().isVisible());
     }
@@ -102,7 +103,7 @@ test("whitepaper: source, navigation, math, local resources and responsive layou
       requests.every((url) => url.startsWith(base)),
       true,
     );
-    const pdf = await page.request.get(base + "/whitepaper.pdf");
+    const pdf = await page.request.get(base + prefix + "/whitepaper.pdf");
     assert.equal(
       pdf.headers()["content-type"].split(";")[0],
       "application/pdf",
@@ -112,4 +113,49 @@ test("whitepaper: source, navigation, math, local resources and responsive layou
     await browser.close();
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+for (const lang of ['en', 'zh-CN']) test(`${lang}: manifesto is complete, local, responsive and linked`, async () => {
+  const server = await startPreview(0);
+  const browser = await chromium.launch();
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const prefix = lang === 'en' ? '' : '/zh';
+    const config = JSON.parse(await readFile(new URL('../whitepaper.config.json', import.meta.url)));
+    const source = await readFile(new URL('../' + config.manifestos[lang], import.meta.url), 'utf8');
+    const page = await browser.newPage();
+    const requests = [];
+    page.on('request', request => requests.push(request.url()));
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto(base + prefix + '/manifesto');
+      await page.evaluate(() => document.fonts.ready);
+      assert.equal(await page.locator('html').getAttribute('lang'), lang);
+      assert.equal(await page.locator('article h2').count(), 9);
+      assert.equal(await page.locator('meta[name="source-sha256"]').getAttribute('content'), createHash('sha256').update(source).digest('hex'));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      assert.equal(await page.locator('header a[href="' + prefix + '/whitepaper"]').count(), 1);
+      if (lang === 'en') assert.doesNotMatch(await page.locator('article').textContent(), /\p{Script=Han}/u);
+      await page.screenshot({ path: new URL(`../test-output/manifesto-${lang}-${width}.png`, import.meta.url).pathname.replace(/^\/(\w:)/, '$1') });
+    }
+    assert.ok(requests.every(url => url.startsWith(base)));
+  } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
+});
+
+test('both homepages and document navigation are readable without JavaScript', async () => {
+  const server = await startPreview(0);
+  const browser = await chromium.launch();
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const page = await browser.newPage({ javaScriptEnabled: false });
+    for (const prefix of ['', '/zh']) {
+      await page.goto(base + prefix + '/');
+      assert.equal(await page.locator('html').getAttribute('lang'), prefix ? 'zh-CN' : 'en');
+      assert.equal(await page.locator('.mission a[href="' + prefix + '/manifesto"]').count(), 1);
+      await page.locator('header a[href="' + prefix + '/whitepaper"]').click();
+      assert.equal(await page.locator('article h2').count() > 0, true);
+      await page.locator('.language-switch').click();
+      assert.equal(page.url(), base + (prefix ? '' : '/zh') + '/whitepaper');
+    }
+  } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 });

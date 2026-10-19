@@ -1,28 +1,40 @@
 # DayCoin V1 · DC1 Mainnet Website
 
-The public mainnet interface for the *DayCoin* project. Official URL: https://daycoin.io99.xyz/.
+The bilingual public interface for DayCoin: https://daycoin.io99.xyz/.
 
-- Mainnet Chain ID: 1
-- DC1 smart contract: 0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715
-- Runtime Keccak-256: 0xfdde03bc7708ba27ee8fae35e8c643e7bff09d1754dbdf173514417d33109c2c
-- Public JSON RPC: https://ethereum-rpc.publicnode.com
+- Ethereum Mainnet, Chain ID `1`
+- DC1: `0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715`
+- Runtime Keccak-256: `0xfdde03bc7708ba27ee8fae35e8c643e7bff09d1754dbdf173514417d33109c2c`
+- Read-only RPC: https://ethereum-rpc.publicnode.com
 
-The frontend compares the fixed runtime code hash and chain ID before transactions and checks the wallet identity on sensitive operations. It does not hold private keys. All deposits/withdrawals move real mainnet ETH. **Claim before topping up or withdrawing**, or unclaimed accrued rewards will be irreversibly forfeited.
+The interface checks chain ID, runtime bytecode and wallet identity before sending transactions. It never holds private keys. Deposits and withdrawals use real ETH. **Every Deposit resets accrual and forfeits unclaimed rewards. Withdraw does not automatically Claim and also forfeits unclaimed rewards. Claim first to preserve them.**
 
-Local checks:
+## Routes / 页面
 
-1. npm ci --prefix sites/daycoin-mainnet
-2. npm --prefix sites/daycoin-mainnet test
-3. npm --prefix sites/daycoin-mainnet run dev
-4. npm --prefix sites/daycoin-mainnet run test:browser (while preview is running)
+| Document | English (default) | 中文 |
+| --- | --- | --- |
+| Home | `/` | `/zh/` |
+| Whitepaper | `/whitepaper` | `/zh/whitepaper` |
+| PDF | `/whitepaper.pdf` | `/zh/whitepaper.pdf` |
+| Manifesto | `/manifesto` | `/zh/manifesto` |
 
-Deploy the frontend using wrangler.mainnet.jsonc. The former UBIC1 interface remains at https://ubi.io99.xyz/ as a distinct historical site; it does not use the DC1 contract.
+Language is determined by the URL, without automatic browser-language redirects or stored preferences. Native links work without JavaScript. A small shared script preserves the current fragment; corresponding document headings use matching `section-N` anchors. Switching language reloads the page and requires selecting a wallet again. It does not cancel any already submitted transaction; inspect wallet history if a transaction is pending or uncertain.
 
-## Whitepaper / 白皮书
+## Sources and architecture / 内容维护
 
-唯一正文是仓库根目录的 Markdown。`whitepaper.config.json` 的 `source` 是唯一文件路径配置；改名时只改这里。封面版本、日期（含草稿状态）、理念及主网链接从正文提取。经济学内容不在模板中维护。
+- `content/index.html`: one homepage structure, with the original Chinese copy and route placeholders.
+- `content/home.en.json`: English static text. `build-home.mjs` translates text nodes and accessible labels, escapes translations, and generates both homepages. It also localizes the existing English navigation labels for Chinese readers. Missing English translations fail the build.
+- `dist/messages.mjs`: English runtime messages keyed by the original Chinese wording. `dist/i18n.mjs` formats string/template messages and translates errors at the presentation boundary. Unknown wallet/network errors receive localized guidance instead of displaying arbitrary provider text. Wallet vendors control their own confirmation screens and languages.
+- `dist/app.mjs`: one shared UI and wallet flow. `core.mjs`, `dashboard.mjs` and `pending.mjs` are shared without changes to their transaction or issuance logic. Both languages use the same contract, RPC, exact wei parsing, identity checks and same-origin operation lock.
+- `whitepaper.config.json`: the only source-path configuration for both whitepapers and manifestos. Repository-root Chinese originals remain intact. English sources are `DayCoin_Whitepaper_v0.2.en.md` and `Manifesto.en.md`.
 
-从仓库根目录执行（Node.js 22 或更新版本）：
+Update both languages together when changing claims or safety disclosures. Preserve matching document heading order to keep language-switch anchors aligned. Tests compare heading structure, display and inline formulas (allowing translated text labels), numeric table values and deployment addresses/hashes. These checks cannot establish semantic equivalence of prose; substantive changes still need bilingual review.
+
+`dist/index.html` remains tracked as in the original project, but is generated: edit the template/dictionary and rebuild. Chinese HTML, document HTML/PDF and `whitepaper-assets` are generated and ignored. Do not edit generated files.
+
+## Build and preview
+
+From the repository root, with Node.js 22 or newer:
 
 ```sh
 npm ci --prefix sites/daycoin-mainnet
@@ -31,20 +43,25 @@ npm run build:whitepaper
 npm --prefix sites/daycoin-mainnet run dev
 ```
 
-打开 http://127.0.0.1:5174/whitepaper 和 http://127.0.0.1:5174/whitepaper.pdf。端口可通过 `PORT` 环境变量修改。Linux 构建机首次安装可用 `playwright install --with-deps chromium`。
+The existing `build:whitepaper` entry point now builds both homepages, both whitepaper HTML/PDF editions and both manifesto pages. Preview at http://127.0.0.1:5174/ and http://127.0.0.1:5174/zh/. Set `PORT` to use another port. On Linux, Chromium may need `playwright install --with-deps chromium`.
 
-构建以 Markdown-it + KaTeX 生成静态 HTML，同一 HTML 用 Playwright 所锁定的 Chromium 打印 A4 PDF。Noto Sans SC 中文字体、品牌字体和公式字体均为本地资源，许可证随资源复制。数学公式错误直接终止构建；网页不运行钱包代码、RPC 或第三方脚本。手机上超长公式可在公式区域横向滚动，PDF 中按可用宽度缩放。打印样式集中在 `whitepaper.css`。
+Markdown-it and KaTeX generate static HTML, and the locked Playwright Chromium prints that same HTML to A4 PDF. Formula errors fail the build. Fonts, licenses, math styles and scripts are local, compatible with the existing strict CSP. Documents do not load wallet or RPC code. Long formulas scroll on phones and scale to the printable width in PDF. PDF metadata timestamps can vary between builds; byte-for-byte reproducibility is not promised.
 
-输出为 `dist/whitepaper.html`、`dist/whitepaper.pdf`、`dist/whitepaper-assets/`，均不提交 Git。不要手改输出。Worker 仍使用原来的 `dist` 静态资源目录；Wrangler build hook 在运行时先重建白皮书，`whitepaper.html` 由静态资源默认规则映射到 `/whitepaper`，无需 Worker 路由代码。
-
-更新正文后重新执行构建即可同步替换两种输出。依赖固定在 package.json 和 package-lock.json；检出旧提交后使用该提交的锁文件和 Chromium 重建。PDF 内部生成时间会改变，不承诺 PDF 字节级完全相同。没有历史输出目录或版本路由。
-
-验证：
+## Validation
 
 ```sh
-npm --prefix sites/daycoin-mainnet run test:whitepaper
 npm --prefix sites/daycoin-mainnet test
 npm --prefix sites/daycoin-mainnet run test:browser
+npm --prefix sites/daycoin-mainnet run test:whitepaper
+npm test
 ```
 
-白皮书测试自启临时预览，检查源文件哈希、章节/公式数、目录目标、320/390/1440px 布局、原站 CSP 下的渲染、本地资源及 PDF 下载。原站浏览器测试需要预览服务器，非默认端口时设置 `PREVIEW_URL`。更新后还应目视检查 PDF 封面、长公式、表格和末尾附录的分页。
+Build first. Browser/document tests start and close their own temporary preview servers. Browser tests mock the wallet and RPC; they never broadcast real transactions. They cover Chinese regression behavior and English Deposit/Claim/Withdraw, exact wei and contract targets, cancellation, network mismatch, unknown results, wallet absence/rejection, invalid amounts, identity changes, language switching and 320/390/1440px layout under the production CSP. Whitepaper tests verify both sources, formulas, navigation, local resources, responsive layout and PDF responses. Review rendered PDF pages after layout or content changes.
+
+## Deployment boundary / 部署边界
+
+Continue using the existing root `wrangler.mainnet.jsonc`. Its build hook invokes `npm run build:whitepaper` and serves this site's `dist` directory. Static files provide both languages on the existing domain; no Worker routing code, second deployment or second domain is needed. Cloudflare's existing HTML handling maps `whitepaper.html` to `/whitepaper` and the nested `zh/index.html` to `/zh/`. Unknown paths are not translated into homepage content by the local preview.
+
+This is a website/document change only. Do not redeploy DC1, modify deployed protocol rules, or alter deployment journals as part of publishing it. The historical UBIC1 site at https://ubi.io99.xyz/ remains independent.
+
+中文维护说明：英文为根路径默认语言，中文完整保留在 `/zh/`。修改首页请编辑 `content`，修改动态提示请同时更新 `messages.mjs`；白皮书和宣言的中英文 Markdown 需同步审阅。共享交易实现与合约配置，不维护两套钱包逻辑。真实钱包界面由钱包自身决定语言；本地自动化验证不代表独立安全审计，也不替代发布后的真实设备检查。

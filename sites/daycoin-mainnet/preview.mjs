@@ -9,7 +9,8 @@ export function startPreview(port = Number(process.env.PORT || 5174)) {
 const server = createServer(async (req, res) => {
   try {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-    const file = resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname === '/whitepaper' ? '/whitepaper.html' : pathname));
+    const route = pathname.endsWith('/') ? pathname + 'index.html' : /\/(whitepaper|manifesto)$/.test(pathname) ? pathname + '.html' : pathname;
+    const file = resolve(root, '.' + route);
     if (!file.startsWith(root.endsWith(sep) ? root : root + sep)) throw Error('path');
     const content = await readFile(file);
     res.writeHead(200, { 'Content-Type': `${mime[extname(file)] || 'application/octet-stream'}; charset=utf-8`, 'Cache-Control': 'no-store' });
