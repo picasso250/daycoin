@@ -11,6 +11,7 @@ const position = (principal, pending = 0n, blockSeconds = genesis + 10n) => ({
 
 test('display truncates, never leaks 18-decimal ETH balance or reward', () => {
   assert.equal(fixedAmount(43949232371024555n, 6), '0.043949');
+  assert.equal(fixedAmount(43703000000000000n, 4), '0.0437');
   assert.equal(fixedAmount(2222222222222222n, 5), '0.00222');
   assert.equal(fixedAmount(0n, 5), '0.00000');
   assert.equal(fixedAmount(10n ** 18n, 5), '1.00000');

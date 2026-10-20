@@ -222,7 +222,7 @@ test('wallet picker detects before authorization, displays full address and supp
     await page.waitForFunction(() => !document.querySelector('#claim').disabled);
     assert.equal(await page.locator('#connect').textContent(), '0x1212…1212 ▾');
     assert.deepEqual(await page.locator('#connect').evaluate(el => ({ padding: getComputedStyle(el).paddingLeft, minWidth: getComputedStyle(el).minWidth })), { padding: '12px', minWidth: '0px' });
-    assert.equal(await page.locator('#eth-balance').textContent(), '3.000000');
+    assert.equal(await page.locator('#eth-balance').textContent(), '3.0000');
     assert.equal(await page.locator('#gap-status').textContent(), '距离达标还差：0.1 ETH');
     assert.equal(await page.locator('#total-supply').textContent(), '3.0');
     assert.equal(await page.locator('#current-epoch').textContent(), '1');

@@ -37,7 +37,7 @@ function render() {
   renderWallets();
   $('deposit').disabled = locked || !position;
   $('withdraw').disabled = locked || !position || position.principal === 0n;
-  $('eth-balance').textContent = dashboard?.ethBalance != null && position ? displayAmount(dashboard.ethBalance, 6) : '—';
+  $('eth-balance').textContent = dashboard?.ethBalance != null && position ? displayAmount(dashboard.ethBalance, 4) : '—';
   $('eth-balance').title = dashboard?.ethBalance != null && position ? `${amount(dashboard.ethBalance)} ETH` : '';
   $('gap-status').textContent = !position ? t('距离达标还差：— ETH') : position.principal >= position.required
     ? t('✓ 已达标') : t`距离达标还差：${amount(position.required - position.principal)} ETH`;

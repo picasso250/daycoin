@@ -94,7 +94,7 @@ for (const lang of ['en', 'zh-CN']) test(`${lang}: whitepaper source, navigation
       if (width < 800) await page.locator("aside summary").click();
       await page.locator("aside a").last().click();
       assert.ok(
-        decodeURIComponent(new URL(page.url()).hash).includes("section-30"),
+        decodeURIComponent(new URL(page.url()).hash).includes("section-32"),
       );
       assert.ok(await page.locator("article h2").last().isVisible());
     }
@@ -151,7 +151,8 @@ test('both homepages and document navigation are readable without JavaScript', a
     for (const prefix of ['', '/zh']) {
       await page.goto(base + prefix + '/');
       assert.equal(await page.locator('html').getAttribute('lang'), prefix ? 'zh-CN' : 'en');
-      assert.equal(await page.locator('.mission a[href="' + prefix + '/manifesto"]').count(), 1);
+      assert.equal(await page.locator('.mission').count(), 0);
+      assert.equal(await page.locator('.intro h1').innerText(), 'One Person\nOne Coin\nOne Day');
       await page.locator('header a[href="' + prefix + '/whitepaper"]').click();
       assert.equal(await page.locator('article h2').count() > 0, true);
       await page.locator('.language-switch').click();

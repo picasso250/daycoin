@@ -11,6 +11,8 @@ DayCoin V1 (DC1) is a minimal Ethereum experiment in continuous monetary issuanc
 
 **ERC-20 Name:** DayCoin V1 · **Symbol:** DC1 · **Decimals:** 18
 
+**Arbitrum One bridged DC1:** [0xDa7f5A3e68145Ad5125216d40D58729bEF5275f7](https://arbiscan.io/address/0xDa7f5A3e68145Ad5125216d40D58729bEF5275f7) — linked by `l1Address()` to Ethereum Mainnet DC1; no independent reward issuer. See whitepaper v0.3 for bridge risks and supply accounting.
+
 **Website:** https://daycoin.io99.xyz/ · **Solidity:** [contracts/DayCoinV1.sol](contracts/DayCoinV1.sol)
 
 An ETH deposit gives an *address*, not a verified human, eligibility to accrue one DC1 per qualifying day (prorated by seconds). A person can control multiple addresses. Every deposit resets the earning clock and forfeits previously unclaimed rewards. Withdraw returns recorded ETH principal, but forfeits unclaimed rewards: **Claim before any further Deposit or Withdraw**. A contract-wallet unable to receive native ETH can fail to withdraw.
@@ -42,6 +44,6 @@ Old Solidity contracts, build scripts, tests, and the obsolete Sepolia website w
 
 Previously deployed UBIC1 contracts remain distinct and live on the blockchain. The historical website at https://ubi.io99.xyz/ is **not** the DC1 site, and old UBIC1 is not automatically migrated.
 
-See the [DayCoin manifesto](%E5%AE%A3%E8%A8%80.md) and [whitepaper](DayCoin_Whitepaper_v0.2.md) for the proposed long-term fairness goals. **One wallet/address is not one human.**
+See the [DayCoin manifesto](%E5%AE%A3%E8%A8%80.md) and [whitepaper v0.3](DayCoin_Whitepaper_v0.3.md) for the proposed long-term fairness goals. **One wallet/address is not one human.**
 
 The local deployments/ directory is excluded from Git and contains essential per-network deployment records. Back it up separately, never delete it to bypass a duplicate-deployment guard.
