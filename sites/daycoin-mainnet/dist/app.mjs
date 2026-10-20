@@ -1,6 +1,6 @@
 import { t, locale, errorMessage } from './i18n.mjs';
 import { readDashboard } from './dashboard.mjs';
-import { estimatePending, fixedAmount } from './pending.mjs';
+import { estimatePending, fixedAmount, roundedAmount } from './pending.mjs';
 import { ADDRESS, RUNTIME_HASH, Wallet, Transactions, amount, depositValue, readPosition } from './core.mjs';
 
 const $ = id => document.getElementById(id);
@@ -56,8 +56,11 @@ function invalidate() {
 }
 function renderProtocol() {
   for (const [id, key, format] of [
-    ['total-supply', 'totalSupply', amount], ['current-epoch', 'currentEpoch', String],
-    ['protocol-required', 'requiredDeposit', amount],
+    ['total-supply', 'totalSupply', roundedAmount],
+    ['total-accrued', 'estimatedTotalAccrued', roundedAmount],
+    ['total-principal', 'totalPrincipal', roundedAmount],
+    ['protocol-required', 'requiredDeposit', roundedAmount],
+    ['current-epoch', 'currentEpoch', String],
     ['next-epoch', 'nextEpochTime', value => new Date(Number(value) * 1000).toISOString().slice(0, 16).replace('T', ' ')],
   ]) $(id).textContent = dashboard?.[key] != null ? format(dashboard[key]) : '—';
   $('protocol-updated').textContent = dashboard ? t`主网区块 ${BigInt(dashboard.block.number)} · 快照` : t('链上数据未读取');

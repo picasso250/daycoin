@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { estimatePending, fixedAmount } from '../dist/pending.mjs';
+import { estimatePending, fixedAmount, roundedAmount } from '../dist/pending.mjs';
 
 const day = 86400n, epoch = 1000n * day;
 const genesis = 1800000000n;
@@ -43,4 +43,12 @@ test('incomplete or future snapshots never fabricate rewards', () => {
   assert.equal(estimatePending(p, null, genesis + day), 12n);
   assert.equal(estimatePending(p, dashboard, genesis), 12n);
   assert.equal(estimatePending(null, dashboard, genesis), null);
+});
+
+test('protocol amounts round to at most 4 decimal places and trim trailing zeros', () => {
+  assert.equal(roundedAmount(1849583333333333332n), '1.8496');
+  assert.equal(roundedAmount(100000000000000000n), '0.1');
+  assert.equal(roundedAmount(0n), '0');
+  assert.equal(roundedAmount(999995000000000000n), '1');
+  assert.equal(roundedAmount(1234567890123456789000000000n), '1234567890.1235');
 });

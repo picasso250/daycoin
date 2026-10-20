@@ -35,9 +35,11 @@
     </section>
     <div class="statusline"><p id="status" role="status" aria-live="polite">连接钱包后读取 Ethereum Mainnet 链上数据。</p><a id="transaction" target="_blank" rel="noopener noreferrer" hidden>查看交易 ↗</a></div>
     <section class="protocol" id="protocol"><div class="section-heading"><div><div class="eyebrow">02 / PROTOCOL</div><h2>规则公开，选择自由。</h2></div><span id="protocol-updated">正在读取主网数据…</span></div><div class="protocol-grid">
-      <div><span class="metric-label">DC1 Total Supply</span><strong id="total-supply">—</strong><small>总供应量 · DC1</small></div>
-      <div><span class="metric-label">Current Epoch</span><strong id="current-epoch">—</strong><small>当前纪元 · 从 0 开始</small></div>
+      <div><span class="metric-label">DC1 Total Supply</span><strong><span id="total-supply">—</span> <small>DC1</small></strong><small>链上现存供应量 · 不含未领取奖励</small></div>
+      <div><span class="metric-label">Estimated Total DC1</span><strong><span id="total-accrued">—</span> <small>DC1</small></strong><small title="当前合约 ETH 余额除以门槛，假设持续达标至今；忽略入场、退出、重置及销毁。">粗估 · 假设当前仓位自创世持续达标</small></div>
+      <div><span class="metric-label">Total Principal</span><strong><span id="total-principal">—</span> <small>ETH</small></strong><small>合约 ETH 余额 · 近似总本金</small></div>
       <div><span class="metric-label">Required Deposit</span><strong><span id="protocol-required">—</span> <small>ETH</small></strong><small>当前发行门槛 · 每千日增加 0.1 ETH</small></div>
+      <div><span class="metric-label">Current Epoch</span><strong id="current-epoch">—</strong><small>当前纪元 · 从 0 开始</small></div>
       <div><span class="metric-label">Next Threshold Change</span><strong id="next-epoch">—</strong><small>下一次门槛变化时间 · UTC</small></div>
     </div></section>
     <section class="principles"><div><span>01</span><h3>本金与奖励，各自独立。</h3><p>门槛不足也可取回全部本金。Withdraw 不自动领取奖励，未领取部分将被放弃。智能合约钱包须能接收 ETH，才能取回本金。</p></div><div><span>02</span><h3>每次存入，重新计时。</h3><p>Deposit 包括追加本金，都会清空未领取奖励。Claim 后已持有的代币不会因此丢失；本金多少不改变每日发行速率。</p></div><div><span>03</span><h3>没有管理员，没有特权。</h3><p>合约没有 owner、升级或暂停入口。门槛自部署起每千日增加 0.1 ETH；当前失格不影响领取此前累计的奖励。</p></div></section>

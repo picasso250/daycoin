@@ -30,7 +30,7 @@ async function setup(options = {}) {
     const { method, params } = route.request().postDataJSON(); rpcCalls.push(method); let result;
     if (method === 'eth_getBalance') {
       if (options.balanceError) { await route.fulfill({ json: { jsonrpc: '2.0', id: 1, error: { code: -32000, message: 'unavailable' } } }); return; }
-      result = '0x29a2241af62c0000';
+      result = params[0].toLowerCase() === ADDRESS.toLowerCase() ? '0x16345785d8a0000' : '0x29a2241af62c0000';
     }
     if (method === 'eth_chainId') result = CHAIN;
     if (method === 'eth_getCode') result = code;
@@ -211,6 +211,27 @@ test('keyboard tabs, reduced motion and narrow viewport preserve accessible acti
   } finally { await context.close(); }
 });
 
+test('protocol is exactly six metrics in two columns on desktop and small phones', async () => {
+  for (const lang of ['en', 'zh']) {
+    const { page, context, errors } = await setup({ lang });
+    try {
+      await page.waitForFunction(() => document.querySelector('#total-principal').textContent !== '—');
+      assert.equal(await page.locator('.protocol-grid > div').count(), 6);
+      assert.equal(await page.locator('#total-supply').textContent(), '3');
+      assert.equal(await page.locator('#total-principal').textContent(), '0.1');
+      assert.equal(await page.locator('#protocol-required').textContent(), '0.2');
+      assert.match(await page.locator('#total-accrued').textContent(), /^\d+(?:\.\d{1,4})?$/);
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: 844 });
+        const columns = await page.locator('.protocol-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+        assert.equal(columns, 2, `${lang} at ${width}px`);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      }
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }
+});
+
 test('wallet picker detects before authorization, displays full address and supports copy and switching', async () => {
   const { page, context, errors } = await setup();
   try {
@@ -224,7 +245,9 @@ test('wallet picker detects before authorization, displays full address and supp
     assert.deepEqual(await page.locator('#connect').evaluate(el => ({ padding: getComputedStyle(el).paddingLeft, minWidth: getComputedStyle(el).minWidth })), { padding: '12px', minWidth: '0px' });
     assert.equal(await page.locator('#eth-balance').textContent(), '3.0000');
     assert.equal(await page.locator('#gap-status').textContent(), '距离达标还差：0.1 ETH');
-    assert.equal(await page.locator('#total-supply').textContent(), '3.0');
+    assert.equal(await page.locator('#total-supply').textContent(), '3');
+    assert.equal(await page.locator('#total-principal').textContent(), '0.1');
+    assert.notEqual(await page.locator('#total-accrued').textContent(), '—');
     assert.equal(await page.locator('#current-epoch').textContent(), '1');
     assert.equal(await page.locator('#next-epoch').textContent(), new Date(1772800000 * 1000).toISOString().slice(0, 16).replace('T', ' '));
     await page.locator('#connect').click();

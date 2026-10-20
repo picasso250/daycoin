@@ -16,6 +16,21 @@ export function fixedAmount(wei, digits) {
   return `${sign}${whole}.${fraction}`;
 }
 
+// Protocol overview display: nearest 4 decimals, without insignificant zeros.
+// Uses BigInt arithmetic; large supplies cannot silently lose precision.
+export function roundedAmount(wei, digits = 4) {
+  if (!Number.isInteger(digits) || digits < 0 || digits > 18) throw Error('Invalid precision');
+  const value = BigInt(wei);
+  const negative = value < 0n;
+  const absolute = negative ? -value : value;
+  const step = 10n ** BigInt(18 - digits);
+  const rounded = (absolute + step / 2n) / step;
+  const base = 10n ** BigInt(digits);
+  const whole = rounded / base;
+  const fractional = digits ? (rounded % base).toString().padStart(digits, '0').replace(/0+$/, '') : '';
+  return (negative && rounded !== 0n ? '-' : '') + whole + (fractional ? '.' + fractional : '');
+}
+
 export function estimatePending(position, dashboard, nowSeconds) {
   if (!position) return null;
   const baseline = BigInt(position.pending);
