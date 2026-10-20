@@ -153,6 +153,15 @@ test('both homepages and document navigation are readable without JavaScript', a
       assert.equal(await page.locator('html').getAttribute('lang'), prefix ? 'zh-CN' : 'en');
       assert.equal(await page.locator('.mission').count(), 0);
       assert.equal(await page.locator('.intro h1').innerText(), 'One Person\nOne Coin\nOne Day');
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: 844 });
+        assert.equal(await page.locator('header a[href="' + prefix + '/manifesto"]').isVisible(), true);
+        assert.equal(await page.locator('header a[href="' + prefix + '/whitepaper"]').isVisible(), true);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      }
+      await page.locator('header a[href="' + prefix + '/manifesto"]').click();
+      assert.equal(page.url(), base + prefix + '/manifesto');
+      await page.goto(base + prefix + '/');
       await page.locator('header a[href="' + prefix + '/whitepaper"]').click();
       assert.equal(await page.locator('article h2').count() > 0, true);
       await page.locator('.language-switch').click();

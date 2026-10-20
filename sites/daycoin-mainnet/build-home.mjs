@@ -10,7 +10,7 @@ export async function buildHome() {
   const template = await read('content/index.html');
   const en = JSON.parse(await read('content/home.en.json'));
   const zh = {
-    'Whitepaper': '白皮书', 'Protocol': '协议规则', 'Contract ↗': '合约 ↗',
+    'Manifesto': '宣言', 'Whitepaper': '白皮书', 'Protocol': '协议规则', 'Contract ↗': '合约 ↗',
     'Connect Wallet': '连接钱包', 'A FIRST ATTEMPT AT EVERYDAY ISSUANCE': '持续发行的第一次尝试',
     '01 / YOUR POSITION': '01 / 你的仓位', '02 / PROTOCOL': '02 / 协议规则',
     'DC1 Total Supply': 'DC1 总供应量', 'Current Epoch': '当前纪元',
