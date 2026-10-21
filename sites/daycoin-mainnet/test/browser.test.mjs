@@ -16,7 +16,7 @@ before(async () => { browser = await chromium.launch({ ...(process.platform === 
 after(async () => { await browser?.close(); await new Promise(resolve => server.close(resolve)); });
 async function setup(options = {}) {
   const context = await browser.newContext({ viewport: { width: 1360, height: 1000 } });
-  const page = await context.newPage(); const errors = [], rpcCalls = [];
+  const page = await context.newPage(); const errors = [], rpcCalls = [], journeyEvents = [];
   // Analytics script is deliberately inert in local wallet tests.
   await page.route('https://static.cloudflareinsights.com/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   const headers = await readFile(new URL('../dist/_headers', import.meta.url), 'utf8');
@@ -24,6 +24,10 @@ async function setup(options = {}) {
   await page.route(base + '/**', async route => {
     const response = await route.fetch();
     await route.fulfill({ response, headers: { ...response.headers(), 'content-security-policy': csp } });
+  });
+  await page.route(base + '/api/journey', async route => {
+    journeyEvents.push(route.request().postDataJSON());
+    await route.fulfill({ status: 204, body: '' });
   });
   let releaseThreshold;
   const thresholdGate = options.holdThreshold ? new Promise(resolve => { releaseThreshold = resolve; }) : null;
@@ -80,7 +84,7 @@ async function setup(options = {}) {
   }, { account, chain: CHAIN, code, block, hash, options });
   await page.goto(base + (options.lang === 'en' ? '/' : '/zh/'));
   await page.evaluate(() => document.fonts.ready);
-  return { page, context, errors, rpcCalls, releaseThreshold };
+  return { page, context, errors, rpcCalls, journeyEvents, releaseThreshold };
 }
 test('deposit amount defaults to the live on-chain threshold and stays editable', async () => {
   const { page, context, errors } = await setup();
@@ -415,5 +419,28 @@ test('language links preserve page and anchor without wallet authorization', asy
       await page.locator('.language-switch').click();
       assert.equal(page.url(), base + '/' + slug + '#section-3');
     }
+  } finally { await context.close(); }
+});
+
+test('anonymous journey uses one temporary session across language navigation', async () => {
+  const { page, context, errors, journeyEvents } = await setup({ lang: 'en' });
+  try {
+    await page.waitForFunction(() => sessionStorage.getItem('dc1_journey_v1'));
+    await page.locator('#connect').click();
+    await page.getByRole('button', { name: 'Test EIP-1193 ↗', exact: true }).click();
+    await page.waitForFunction(() => !document.querySelector('#deposit').disabled);
+    await page.locator('#tab-claim').click();
+    await page.locator('.language-switch').click();
+    await page.waitForFunction(() => document.documentElement.lang === 'zh-CN');
+    await page.waitForFunction(() => sessionStorage.getItem('dc1_journey_v1'));
+    await page.waitForTimeout(200);
+    const events = journeyEvents.map(x => x.event);
+    for (const name of ['page_view', 'connect_click', 'wallet_select', 'connect_success', 'tab_claim']) assert.ok(events.includes(name), name);
+    const ids = new Set(journeyEvents.map(x => x.session));
+    assert.equal(ids.size, 1);
+    assert.ok(journeyEvents.some(x => x.page === 'home_en'));
+    assert.ok(journeyEvents.some(x => x.page === 'home_zh'));
+    for (const item of journeyEvents) assert.deepEqual(Object.keys(item).sort(), ['event', 'page', 'session', 'step']);
+    assert.deepEqual(errors, []);
   } finally { await context.close(); }
 });

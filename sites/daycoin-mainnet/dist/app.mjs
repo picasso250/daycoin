@@ -1,4 +1,5 @@
 import { t, locale, errorMessage } from './i18n.mjs';
+import { track } from './journey.mjs';
 import { readDashboard } from './dashboard.mjs';
 import { estimatePending, fixedAmount, roundedAmount } from './pending.mjs';
 import { ADDRESS, RUNTIME_HASH, Wallet, Transactions, amount, depositValue, readPosition } from './core.mjs';
@@ -76,7 +77,7 @@ function renderWallets() {
     button.type = 'button'; button.className = 'wallet-choice';
     button.textContent = `${item.name} ↗`;
     button.disabled = detecting || loading || transactions.busy || transactions.uncertain;
-    button.addEventListener('click', () => connectWallet(item));
+    button.addEventListener('click', () => { track('wallet_select'); connectWallet(item); });
     $('wallet-list').append(button);
   }
 }
@@ -90,6 +91,7 @@ window.addEventListener('eip6963:announceProvider', event => {
 });
 window.dispatchEvent(new Event('eip6963:requestProvider'));
 $('connect').addEventListener('click', () => {
+  track('connect_click');
   const menu = $('wallet-menu');
   $('wallet-title').textContent = connectedAccount ? t('你的钱包') : t('连接你的钱包');
   $('copy-address').textContent = t('复制地址');
@@ -137,10 +139,12 @@ async function refresh() {
     const nextDashboard = await readDashboard(nextIdentity.account, nextPosition.block);
     await wallet.assertIdentity(nextIdentity);
     if (currentVersion !== version) return;
+    const firstConnection = !identity;
     identity = nextIdentity; connectedAccount = nextIdentity.account; position = nextPosition; dashboard = nextDashboard;
+    if (firstConnection) track('connect_success');
     if (!transactions.uncertain) status(t('链上数据已更新，合约 Runtime Hash 核对通过。'));
   } catch (error) {
-    if (currentVersion === version) { identity = undefined; position = undefined; status(errorMessage(error), true); }
+    if (currentVersion === version) { if (!identity) track('connect_error'); identity = undefined; position = undefined; status(errorMessage(error), true); }
   } finally { loading = false; render(); }
 }
 async function connectWallet(selected) {
@@ -155,6 +159,7 @@ async function connectWallet(selected) {
     $('wallet-menu').close(); status(t('正在读取 Mainnet 链上数据…'));
   } catch (error) {
     const message = error.code === 4001 ? t('已取消连接。') : errorMessage(error);
+    track(error.code === 4001 ? 'connect_cancel' : 'connect_error');
     status(message, true); $('wallet-feedback').textContent = message;
     loading = false; render(); return;
   }
@@ -166,10 +171,15 @@ function confirmOperation(kind, value, snapshot) {
   $('confirm-body').textContent = kind === 'deposit' ? t`本次存入 ${amount(value)} ETH。` : kind === 'withdraw' ? t`将取回全部记录本金：${amount(snapshot.principal)} ETH。` : t`当前可领取 ${amount(snapshot.pending)} DC1；实际奖励以执行时的链上结果为准。`;
   $('confirm-warning').textContent = kind === 'deposit' ? t`未领取奖励和计时将永久归零。目前待领 ${amount(snapshot.pending)} DC1，执行前新增的奖励也会作废。若要保留，请取消并先 Claim。` : kind === 'withdraw' ? t`所有未领取奖励将作废，目前为 ${amount(snapshot.pending)} DC1。若要保留，请取消并先 Claim。` : t('领取奖励不会减少本金。');
   const dialog = $('confirmation'); dialog.returnValue = 'cancel'; dialog.showModal();
-  return new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true }));
+  track('confirmation_open');
+  return new Promise(resolve => dialog.addEventListener('close', () => {
+    track(dialog.returnValue === 'confirm' ? 'confirmation_confirm' : 'confirmation_cancel');
+    resolve(dialog.returnValue === 'confirm');
+  }, { once: true }));
 }
 async function transact(kind) {
   if (!identity || !position || transactions.busy || transactions.uncertain || loading) return;
+  track(kind + '_click');
   const activeWallet = wallet, expected = identity;
   let value;
   try { value = kind === 'deposit' ? depositValue($('deposit-amount').value.trim()) : 0n; }
@@ -181,6 +191,7 @@ async function transact(kind) {
       snapshot => confirmOperation(kind, value, snapshot), hash => {
         $('transaction').href = `${explorer}/tx/${hash}`; $('transaction').hidden = false;
         status(t('交易已提交，正在等待 Mainnet 回执…'));
+        track('transaction_submitted');
       });
     // Optional same-origin coordination, without persistent transaction records.
     const operation = navigator.locks ? navigator.locks.request(`daycoin-mainnet:${expected.account}`, { ifAvailable: true }, lock => {
@@ -190,10 +201,11 @@ async function transact(kind) {
     render();
     const hash = await operation;
     if (hash) {
+      track('transaction_confirmed');
       await refresh();
       status(t`交易已在 Mainnet 确认（1 个区块）。${position ? t('仓位已更新。') : t('仓位暂未更新，请重新加载页面。')}`);
     } else status(t('已取消操作，未向钱包发送交易。'));
-  } catch (error) { status(errorMessage(error), true); }
+  } catch (error) { track('transaction_error'); status(errorMessage(error), true); }
   finally { render(); }
 }
 for (const kind of ['deposit', 'claim', 'withdraw']) $(kind).addEventListener('click', () => transact(kind));
@@ -204,6 +216,7 @@ setInterval(renderPending, 250);
 // Tabs only select a view. Sending always uses the existing guarded operation.
 const tabs = [...document.querySelectorAll('[role="tab"]')];
 function selectTab(tab) {
+  track('tab_' + tab.dataset.action);
   for (const item of tabs) {
     const selected = item === tab;
     item.classList.toggle('selected', selected);

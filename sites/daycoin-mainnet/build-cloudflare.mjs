@@ -1,4 +1,4 @@
-// Cloudflare builds static HTML/CSS only; GitHub Actions generates the two PDFs.
+// Cloudflare builds static HTML/CSS only; the two PDFs are generated locally and committed to Git.
 import { readFile } from 'node:fs/promises';
 
 for (const path of ['./dist/whitepaper.pdf', './dist/zh/whitepaper.pdf']) {

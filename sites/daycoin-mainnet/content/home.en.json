@@ -61,6 +61,7 @@
   "固定合约与验证信息 ＋": "Fixed contract and verification ＋",
   "交易前核对网络、账户及运行时代码。仓位初值来自 Ethereum PublicNode；待领取奖励依据合约发行规则在本地按秒估算，实际 Claim 金额以链上执行为准。": "Before a transaction, this interface verifies the network, account and runtime code. Position snapshots come from Ethereum PublicNode. Pending rewards are estimated locally each second under the contract rules; the actual Claim amount is determined on-chain.",
   "代码不可篡改，制度可以演化。": "Fixed code. Room for new ideas.",
+  "匿名会话行为统计：不收集钱包地址；尊重浏览器不跟踪设置。": "Anonymous session analytics; no wallet addresses collected. Browser do-not-track preferences are respected.",
   "在 Etherscan 查看 Ethereum Mainnet 合约": "View the Ethereum Mainnet contract on Etherscan",
   "连接你的钱包": "Connect your wallet",
   "关闭钱包菜单": "Close wallet menu",

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node preview.mjs",
-    "test": "node --test test/core.test.mjs test/dashboard.test.mjs test/pending.test.mjs test/i18n.test.mjs",
+    "test": "node --test test/core.test.mjs test/dashboard.test.mjs test/pending.test.mjs test/i18n.test.mjs test/journey.test.mjs",
     "test:browser": "node --test test/browser.test.mjs",
     "build:whitepaper": "node build-whitepaper.mjs",
     "build:cloudflare": "node build-cloudflare.mjs",

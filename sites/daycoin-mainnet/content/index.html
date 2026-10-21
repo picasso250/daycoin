@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#f4f3ee">
   <meta name="description" content="DC1 · Ethereum Mainnet。达标期间按秒累计，每日发行 1 DC1。自主领取奖励，随时取回全部记录本金。">
   <title>DayCoin V1 (DC1) — One Coin One Day</title>
-  <link rel="stylesheet" href="/styles.css"><script type="module" src="/app.mjs"></script>
+  <link rel="stylesheet" href="/styles.css"><script type="module" src="/app.mjs"></script><script type="module" src="/journey.mjs"></script>
 </head>
 <body>
 <div class="shell">
@@ -45,7 +45,7 @@
     <section class="principles"><div><span>01</span><h3>本金与奖励，各自独立。</h3><p>门槛不足也可取回全部本金。Withdraw 不自动领取奖励，未领取部分将被放弃。智能合约钱包须能接收 ETH，才能取回本金。</p></div><div><span>02</span><h3>每次存入，重新计时。</h3><p>Deposit 包括追加本金，都会清空未领取奖励。Claim 后已持有的代币不会因此丢失；本金多少不改变每日发行速率。</p></div><div><span>03</span><h3>没有管理员，没有特权。</h3><p>合约没有 owner、升级或暂停入口。门槛自部署起每千日增加 0.1 ETH；当前失格不影响领取此前累计的奖励。</p></div></section>
     <details class="contract-details"><summary>Contract & verification <span>固定合约与验证信息 ＋</span></summary><dl><dt>Ethereum Mainnet · Chain ID 1</dt><dd><a id="contract" target="_blank" rel="noopener noreferrer"></a></dd><dt>Runtime Hash · Keccak-256</dt><dd id="runtime"></dd></dl><p>交易前核对网络、账户及运行时代码。仓位初值来自 Ethereum PublicNode；待领取奖励依据合约发行规则在本地按秒估算，实际 Claim 金额以链上执行为准。</p></details>
   </main>
-  <footer><a class="footer-brand" href="{{home}}">DC1</a><p>代码不可篡改，制度可以演化。<br><span>One address is not necessarily one person.</span></p><a class="footer-network" href="https://etherscan.io/address/0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715" target="_blank" rel="noopener noreferrer" aria-label="在 Etherscan 查看 Ethereum Mainnet 合约">Ethereum Mainnet ↗</a></footer>
+  <footer><a class="footer-brand" href="{{home}}">DC1</a><p>代码不可篡改，制度可以演化。<br><span>One address is not necessarily one person.</span><br><small>匿名会话行为统计：不收集钱包地址；尊重浏览器不跟踪设置。</small></p><a class="footer-network" href="https://etherscan.io/address/0x5473aac7ed5c5b14c4E7e2c8a8844f8e3FC92715" target="_blank" rel="noopener noreferrer" aria-label="在 Etherscan 查看 Ethereum Mainnet 合约">Ethereum Mainnet ↗</a></footer>
 </div>
 <dialog id="wallet-menu" aria-labelledby="wallet-title">
   <div class="wallet-menu-heading"><div><div class="eyebrow">YOUR WALLET / ETHEREUM MAINNET</div><h2 id="wallet-title">连接你的钱包</h2></div><button id="wallet-close" aria-label="关闭钱包菜单">×</button></div>
