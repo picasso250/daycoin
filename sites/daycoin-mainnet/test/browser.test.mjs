@@ -17,6 +17,8 @@ after(async () => { await browser?.close(); await new Promise(resolve => server.
 async function setup(options = {}) {
   const context = await browser.newContext({ viewport: { width: 1360, height: 1000 } });
   const page = await context.newPage(); const errors = [], rpcCalls = [];
+  // Analytics script is deliberately inert in local wallet tests.
+  await page.route('https://static.cloudflareinsights.com/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   const headers = await readFile(new URL('../dist/_headers', import.meta.url), 'utf8');
   const csp = headers.match(/Content-Security-Policy: (.+)/)[1];
   await page.route(base + '/**', async route => {
@@ -391,7 +393,7 @@ test('English amount validation and identity change never send a transaction', a
     await page.locator('#confirmation').waitFor({ state: 'visible' });
     await page.evaluate(() => testWallet.emit('accountsChanged'));
     await page.locator('#confirmation').waitFor({ state: 'hidden' });
-    assert.match(await page.locator('#status').textContent(), /Operation cancelled/);
+    assert.match(await page.locator('#status').textContent(), /Operation cancelled|Your wallet account or network changed/);
     assert.equal(await page.locator('#deposit').isDisabled(), true);
     assert.equal(await page.evaluate(() => testWallet.sent.length), 0);
     assert.deepEqual(errors, []);

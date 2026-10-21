@@ -19,6 +19,8 @@ for (const lang of ['en', 'zh-CN']) test(`${lang}: whitepaper source, navigation
     );
     const prefix = lang === 'en' ? '' : '/zh';
     const page = await browser.newPage();
+    // Mock the known analytics script so tests do not make external requests.
+    await page.route('https://static.cloudflareinsights.com/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
     const requests = [],
       errors = [];
     page.on("request", (req) => requests.push(req.url()));
@@ -100,7 +102,7 @@ for (const lang of ['en', 'zh-CN']) test(`${lang}: whitepaper source, navigation
     }
     assert.deepEqual(errors, []);
     assert.equal(
-      requests.every((url) => url.startsWith(base)),
+      requests.every((url) => url.startsWith(base) || url === 'https://static.cloudflareinsights.com/beacon.min.js'),
       true,
     );
     const pdf = await page.request.get(base + prefix + "/whitepaper.pdf");
@@ -124,6 +126,7 @@ for (const lang of ['en', 'zh-CN']) test(`${lang}: manifesto is complete, local,
     const config = JSON.parse(await readFile(new URL('../whitepaper.config.json', import.meta.url)));
     const source = await readFile(new URL('../' + config.manifestos[lang], import.meta.url), 'utf8');
     const page = await browser.newPage();
+    await page.route('https://static.cloudflareinsights.com/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
     const requests = [];
     page.on('request', request => requests.push(request.url()));
     for (const width of [1440, 390, 320]) {
@@ -138,7 +141,7 @@ for (const lang of ['en', 'zh-CN']) test(`${lang}: manifesto is complete, local,
       if (lang === 'en') assert.doesNotMatch(await page.locator('article').textContent(), /\p{Script=Han}/u);
       await page.screenshot({ path: new URL(`../test-output/manifesto-${lang}-${width}.png`, import.meta.url).pathname.replace(/^\/(\w:)/, '$1') });
     }
-    assert.ok(requests.every(url => url.startsWith(base)));
+    assert.ok(requests.every(url => url.startsWith(base) || url === 'https://static.cloudflareinsights.com/beacon.min.js'));
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 });
 
