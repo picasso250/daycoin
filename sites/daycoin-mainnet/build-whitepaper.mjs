@@ -138,7 +138,8 @@ async function buildDocument(lang, slug, sourcePath) {
     `const menu = document.querySelector('aside details'); const mobile = matchMedia('(max-width:800px)'); const update = () => { menu.open = !mobile.matches; }; update(); mobile.addEventListener('change', update); menu.addEventListener('click', event => { if (mobile.matches && event.target.closest('a')) menu.open = false; });\n`,
   );
   await writeFile(resolve(here, `dist${home}${slug}.html`), html);
-  if (!paper) return;
+  // Cloudflare publishes PDFs generated and committed by GitHub Actions.
+  if (!paper || process.env.DAYCOIN_SKIP_PDF === '1') return;
   const server = await startPreview(0);
   let browser;
   try {

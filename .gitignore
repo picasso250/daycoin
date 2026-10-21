@@ -12,11 +12,11 @@ deployments/
 
 # Rebuilt from the single Markdown source (npm run build:whitepaper).
 sites/daycoin-mainnet/dist/whitepaper.html
-sites/daycoin-mainnet/dist/whitepaper.pdf
 sites/daycoin-mainnet/dist/whitepaper-assets/
 
 # Generated bilingual pages and documents
-sites/daycoin-mainnet/dist/zh/
+sites/daycoin-mainnet/dist/zh/*
+!sites/daycoin-mainnet/dist/zh/whitepaper.pdf
 sites/daycoin-mainnet/dist/manifesto.html
 
 # Local airdrop snapshots and transaction journal
