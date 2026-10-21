@@ -1,6 +1,5 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { messages } from './dist/messages.mjs';
-import { analyticsBeacon } from './analytics.mjs';
 const read = name => readFile(new URL(name, import.meta.url), 'utf8');
 const escape = text => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 export function languageLinks(path) {
@@ -34,7 +33,7 @@ export async function buildHome() {
       .replace('lang="zh-CN"', `lang="${lang}"`);
     const vars = { home, other: lang === 'en' ? '/zh/' : '/', otherLang: lang === 'en' ? 'zh-CN' : 'en', otherLabel: lang === 'en' ? '中文' : 'English' };
     html = html.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key]);
-    html = html.replace('</head>', `${languageLinks('')}<link rel="canonical" href="https://daycoin.io99.xyz${home}"><script type="module" src="/language.mjs"></script>${analyticsBeacon}</head>`);
+    html = html.replace('</head>', `${languageLinks('')}<link rel="canonical" href="https://daycoin.io99.xyz${home}"><script type="module" src="/language.mjs"></script></head>`);
     await mkdir(new URL('dist' + home, import.meta.url), { recursive: true });
     await writeFile(new URL('dist' + home + 'index.html', import.meta.url), html);
   }
