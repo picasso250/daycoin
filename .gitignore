@@ -18,3 +18,7 @@ sites/daycoin-mainnet/dist/whitepaper-assets/
 # Generated bilingual pages and documents
 sites/daycoin-mainnet/dist/zh/
 sites/daycoin-mainnet/dist/manifesto.html
+
+# Local airdrop snapshots and transaction journal
+.airdrop-v2ex-*.json
+.airdrop-v2ex.csv
