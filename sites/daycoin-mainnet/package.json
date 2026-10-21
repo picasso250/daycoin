@@ -7,6 +7,7 @@
     "test": "node --test test/core.test.mjs test/dashboard.test.mjs test/pending.test.mjs test/i18n.test.mjs",
     "test:browser": "node --test test/browser.test.mjs",
     "build:whitepaper": "node build-whitepaper.mjs",
+    "build:cloudflare": "playwright install chromium && npm run build:whitepaper",
     "test:whitepaper": "node --test test/whitepaper.test.mjs"
   },
   "devDependencies": {

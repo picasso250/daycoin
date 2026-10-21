@@ -60,7 +60,7 @@ Build first. Browser/document tests start and close their own temporary preview 
 
 ## Deployment boundary / 部署边界
 
-Continue using the existing root `wrangler.mainnet.jsonc`. Its build hook invokes `npm run build:whitepaper` and serves this site's `dist` directory. Static files provide both languages on the existing domain; no Worker routing code, second deployment or second domain is needed. Cloudflare's existing HTML handling maps `whitepaper.html` to `/whitepaper` and the nested `zh/index.html` to `/zh/`. Unknown paths are not translated into homepage content by the local preview.
+Use the website-local `wrangler.jsonc` with Cloudflare Git integration **Root directory** `sites/daycoin-mainnet`, **Build command** `npm run build:cloudflare`, and **Deploy command** `npx wrangler deploy`. Cloudflare installs this folder's package-lock dependencies and the build command installs Playwright Chromium before producing HTML/PDF; Wrangler serves the local `dist` directory. The root repository remains available for reading the Markdown source files. Static files provide both languages on the existing domain; no Worker routing code, second deployment or second domain is needed. Cloudflare's existing HTML handling maps `whitepaper.html` to `/whitepaper` and the nested `zh/index.html` to `/zh/`. Unknown paths are not translated into homepage content by the local preview.
 
 This is a website/document change only. Do not redeploy DC1, modify deployed protocol rules, or alter deployment journals as part of publishing it. The historical UBIC1 site at https://ubi.io99.xyz/ remains independent.
 

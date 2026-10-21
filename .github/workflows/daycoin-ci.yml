@@ -11,7 +11,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/daycoin-ci.yml'
-      - 'wrangler.mainnet.jsonc'
+      - 'sites/daycoin-mainnet/wrangler.jsonc'
   pull_request:
   workflow_dispatch:
 
