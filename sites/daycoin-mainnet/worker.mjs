@@ -32,7 +32,11 @@ export default {
       Object.keys(payload).sort().join(',') !== 'event,page,session,step') {
       return json('Invalid event', 400);
     }
-    if (!env.JOURNEY) return json('Analytics unavailable', 503);
+    if (!env.JOURNEY || !env.JOURNEY_DB) return json('Analytics unavailable', 503);
+    try {
+      await env.JOURNEY_DB.prepare('INSERT OR IGNORE INTO daycoin_events (session, step, event, page) VALUES (?, ?, ?, ?)')
+        .bind(session, step, event, page).run();
+    } catch { return json('Event storage unavailable', 503); }
     env.JOURNEY.writeDataPoint({ blobs: [session, event, page], doubles: [step], indexes: [session] });
     return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
   }
