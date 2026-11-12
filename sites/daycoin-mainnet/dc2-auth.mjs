@@ -1,3 +1,4 @@
+import { handleIssuance, issuerStatus } from './dc2-issuer.mjs';
 // DC2 preview authentication. No token persistence and no issuance authority.
 // GitHub OAuth app credentials and the HMAC session key are Worker secrets.
 const PREFIX = '/api/dc2/';
@@ -96,6 +97,7 @@ async function publicEvidence(fetcher, user, token, now) {
   const daysOld = Math.max(0, Math.floor((now * 1000 - Date.parse(user.created_at)) / 86400000));
   return {
     daysOld,
+    createdAt: user.created_at,
     followersObserved: Number.isSafeInteger(user.followers) && user.followers >= 0 ? user.followers : null,
     publicNonForkReposObserved: reposComplete ? own.length : own.length,
     rawStarsObserved: reposComplete ? stars : stars,
@@ -115,7 +117,11 @@ export async function handleDc2(request, env, { fetcher = fetch, now = () => Mat
   if (url.origin !== publicOrigin) return json({ error: 'Unrecognized origin' }, 403);
   const ready = Boolean(env.DC2_GITHUB_CLIENT_ID && env.DC2_GITHUB_CLIENT_SECRET &&
     env.DC2_SESSION_SECRET && env.DC2_SESSION_SECRET.length >= 32);
-  if (path === 'config' && request.method === 'GET') return json({ loginReady: ready, network: 'Arbitrum One', preview: true });
+  if (path === 'config' && request.method === 'GET') return json({ loginReady: ready, network: 'Arbitrum One', preview: true, testnet: issuerStatus(env) });
+  if (['issuer-status', 'prepare', 'attest'].includes(path)) {
+    const session = await decodeSession(readCookie(request, SESSION), env.DC2_SESSION_SECRET, now());
+    return handleIssuance(path, request, env, session, now());
+  }
   if (path === 'me' && request.method === 'GET') {
     const session = await decodeSession(readCookie(request, SESSION), env.DC2_SESSION_SECRET, now());
     return json(session ? {

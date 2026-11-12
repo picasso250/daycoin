@@ -1,3 +1,4 @@
+import { beginTestnetRegistration } from './registration.mjs';
 const $ = id => document.getElementById(id);
 const status = $('status');
 const login = $('login');
@@ -9,6 +10,7 @@ const refreshDialog = $('refresh-dialog');
 let refreshAfter = 0;
 let loginReady = false;
 let authenticated = false;
+let testnetConfig = null;
 const say = msg => { status.textContent = msg; show(status, Boolean(msg)); };
 const show = (el, yes) => el.classList.toggle('hidden', !yes);
 const format = value => typeof value === 'number' ? value.toLocaleString('zh-CN') : '暂无数据';
@@ -37,6 +39,7 @@ async function refresh() {
     const config = await configRes.json();
     const me = await meRes.json();
     loginReady = config.loginReady;
+    testnetConfig = config.testnet || null;
     authenticated = Boolean(me.authenticated);
     login.setAttribute('aria-disabled', config.loginReady ? 'false' : 'true');
     if (config.loginReady) login.setAttribute('href', '/api/dc2/login');
@@ -62,6 +65,8 @@ async function refresh() {
         ? '上次检查：' + new Date(checkedAt * 1000).toLocaleString('zh-CN')
         : '上次检查：登录时';
       refreshAfter = Number.isSafeInteger(me.refreshAfter) ? me.refreshAfter : 0;
+      $('enroll').disabled = !testnetConfig?.enabled;
+      $('enrollment-hint').textContent = testnetConfig?.enabled ? '仅限 Arbitrum Sepolia。申请前将公开绑定 GitHub ID 与钱包地址。' : '合约和签发服务仍在测试，暂未开放登记。';
       if (!error) say('');
     } else if (!error) {
       say(config.loginReady ? '登录 GitHub 后可查看账户公开贡献的初步分析。' : 'GitHub 登录尚未配置，公开预览已开放。');
@@ -71,6 +76,18 @@ async function refresh() {
     say('目前无法连接登录服务，请稍后再试。');
   }
 }
+$('enroll').addEventListener('click', async () => {
+  const button = $('enroll');
+  button.disabled = true;
+  const result = $('enrollment-result');
+  try {
+    await beginTestnetRegistration(testnetConfig, message => { result.textContent = message; });
+  } catch (error) {
+    result.textContent = '登记未完成：' + (error?.message || '未知错误');
+  } finally {
+    button.disabled = !testnetConfig?.enabled;
+  }
+});
 recheck.addEventListener('click', () => {
   if (!authenticated || !loginReady) return;
   const seconds = Math.max(0, refreshAfter - Math.floor(Date.now() / 1000));

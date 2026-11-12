@@ -47,7 +47,15 @@
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14-5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14 5l2-2"/><path d="M20 20v-4h-4"/></svg>
       </button>
     </div>
-    <div class="note"><strong>尚不是正式资格结果</strong><p>正式规则和独立贡献信号的核实方式仍在开发。当前页面不会登记永久资格，也不会发行 DC2。</p></div>
+    <div class="note"><strong>尚不是正式资格结果</strong><p>目前为公开数据预分析，暂未部署 DC2 代币或开启测试网登记。</p></div>
+    <div class="enrollment" id="enrollment">
+      <div>
+        <strong>GitHub 资格与钱包登记</strong>
+        <p id="enrollment-hint">正在检查测试网配置…</p>
+      </div>
+      <button id="enroll" class="secondary" type="button" disabled>连接钱包（测试网）</button>
+    </div>
+    <p id="enrollment-result" class="fineprint" role="status" aria-live="polite"></p>
   </section>
   <dialog id="refresh-dialog" class="refresh-dialog" aria-labelledby="refresh-dialog-title">
     <div class="dialog-heading" id="refresh-dialog-title">暂时无法重新检查</div>

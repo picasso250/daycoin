@@ -21,3 +21,9 @@ main{max-width:1120px;padding:0 28px;margin:auto}.hero{padding:102px 0 100px;max
 .refresh-dialog .secondary{padding:9px 17px}
 @media(max-width:740px){.panel{margin-top:12px}.recheck-row{gap:3px}}
 @media(prefers-reduced-motion:reduce){.refresh-icon.loading svg{animation:none}}
+
+.enrollment{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-top:24px;padding-top:22px;border-top:1px solid #31483b}
+.enrollment strong{font-size:14px}.enrollment p{color:#8ca799;font-size:12px;margin:5px 0 0}.enrollment button{padding:9px 14px;white-space:nowrap}
+.enrollment button:disabled{cursor:not-allowed;opacity:.45}
+#enrollment-result{overflow-wrap:anywhere}
+@media(max-width:740px){.enrollment{align-items:flex-start;flex-direction:column}}

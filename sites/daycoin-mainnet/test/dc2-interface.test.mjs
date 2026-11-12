@@ -41,6 +41,8 @@ test('after GitHub login, analysis replaces introduction and refresh icon stays 
   assert.equal(await page.locator('#hero').isVisible(), false);
   assert.equal(await page.locator('#account').isVisible(), true);
   assert.equal(await page.locator('#logout').isVisible(), true);
+  assert.equal(await page.locator('#enroll').isVisible(), true);
+  assert.equal(await page.locator('#enroll').isDisabled(), true);
   assert.ok((await page.locator('#account').boundingBox()).y < 100);
   const refresh = page.locator('#recheck');
   assert.equal(await refresh.isEnabled(), true);

@@ -42,7 +42,7 @@ const fixture = (url) => {
 
 test('unconfigured service does not offer a broken login redirect', async () => {
   const a = await call('/api/dc2/config', {}, {});
-  assert.deepEqual(await a.json(), { loginReady: false, network: 'Arbitrum One', preview: true });
+  assert.deepEqual(await a.json(), { loginReady: false, network: 'Arbitrum One', preview: true, testnet: { enabled: false, chainId: 421614, contract: null } });
   const b = await call('/api/dc2/login', {}, {});
   assert.equal(b.status, 503);
 });
