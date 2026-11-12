@@ -33,6 +33,16 @@
       </div>
       <button id="logout" class="quiet-action" type="button">退出登录</button>
     </div>
+    <section class="wallet-dashboard hidden" id="wallet-dashboard" aria-label="DC2 链上钱包">
+      <div class="wallet-head"><div><p class="eyebrow">YOUR ON-CHAIN POSITION</p><h3>我的 DayCoin 2</h3><p class="fineprint" id="wallet-identity"></p></div><span class="wallet-active">✓ 链上登记成功</span></div>
+      <div class="wallet-stats">
+        <div class="wallet-primary"><span>可领取 · 每天累计 1 DC2</span><strong id="wallet-pending">—</strong><span>DC2 · 随时间持续累计</span></div>
+        <div class="wallet-secondary"><span>钱包当前 DC2 余额</span><strong id="wallet-balance">—</strong><span>DC2 · 已领取及转入减去转出</span></div>
+      </div>
+      <p class="fineprint" id="wallet-since"></p>
+      <div class="wallet-actions"><button id="claim" type="button" class="button" disabled>领取累计的 DC2（Claim）</button><button id="wallet-reload" type="button" class="secondary">刷新链上数据</button><a id="wallet-explorer" href="https://arbiscan.io/address/0xD891dc80535e885E5893B8139902F90F6aBA086b" target="_blank" rel="noopener noreferrer">查看链上记录 ↗</a></div>
+      <p class="fineprint" id="wallet-result" role="status" aria-live="polite"></p>
+    </section>
     <div class="metric-grid">
       <div class="metric"><strong id="age">—</strong><span>账户历史（年）</span></div>
       <div class="metric"><strong id="repos">—</strong><span>公开原创仓库（已观察）</span></div>
@@ -58,6 +68,7 @@
       </button>
     </div>
     <div class="note"><strong>资格数据来自 GitHub 公开记录</strong><p>这是 GitHub 公开资料的资格预分析。符合条件后可申请链上登记；任何人的资格可能因数据不完整而无法确认。</p></div>
+    <div class="wallet-connect-row"><button id="wallet-connect" type="button" class="secondary">连接钱包 · 查看 DC2</button><span id="wallet-connect-status" class="fineprint">已登记的钱包可以直接查看累计与领取，无需再次登记。</span></div>
     <div class="enrollment" id="enrollment">
       <div>
         <strong>GitHub 资格与钱包登记</strong>
