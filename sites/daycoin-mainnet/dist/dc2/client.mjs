@@ -52,18 +52,15 @@ async function refresh() {
     if (me.authenticated) {
       const { user, evidence } = me;
       const checks = me.eligibility?.checks || {};
-      const verified = key => checks[key] === true;
-      const confirmed = (id, key, unknown) => {
+      const states = { age: 'check-age', stars: 'check-stars', prs: 'check-prs', followers: 'check-followers' };
+      for (const [key, id] of Object.entries(states)) {
         const node = $(id);
-        const state = verified(key) ? 'pass' : unknown ? 'unknown' : 'fail';
+        const result = checks[key];
+        const state = result === true ? 'pass' : result === false ? 'fail' : 'unknown';
         node.dataset.state = state;
-        node.textContent = state === 'pass' ? '✓ 已达标' : state === 'unknown' ? '？数据不足' : '× 未达标';
-      };
-      confirmed('check-age', 'age', !evidence.createdAt);
-      confirmed('check-stars', 'stars', !Number.isSafeInteger(evidence.rawStarsObserved));
-      confirmed('check-prs', 'prs', !Number.isSafeInteger(evidence.externalMergedPRsObserved));
-      confirmed('check-followers', 'followers', !Number.isSafeInteger(evidence.followersObserved));
-      eligible = me.eligibility?.eligible === true && ['age','stars','prs','followers'].every(verified);
+        node.textContent = state === 'pass' ? '✓ 已达标' : state === 'fail' ? '× 未达标' : '？数据不足';
+      }
+      eligible = me.eligibility?.eligible === true && Object.keys(states).every(key => checks[key] === true);
       $('qualification-summary').textContent = eligible ? '✓ 符合登记门槛' : '暂不符合登记条件';
       $('qualification-summary').dataset.eligible = String(eligible);
       $('qualification-explanation').textContent = eligible
@@ -106,7 +103,7 @@ $('enroll').addEventListener('click', async () => {
   } catch (error) {
     result.textContent = '登记未完成：' + (error?.message || '未知错误');
   } finally {
-    button.disabled = !issuanceConfig?.enabled || !$('consent').checked;
+    button.disabled = !issuanceConfig?.enabled || !eligible || !$('consent').checked;
   }
 });
 recheck.addEventListener('click', () => {

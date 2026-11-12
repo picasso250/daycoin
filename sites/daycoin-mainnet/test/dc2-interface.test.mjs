@@ -91,7 +91,7 @@ test('insufficient GitHub metrics identify failed criteria and block registratio
     issuance:{ enabled:true,chainId:42161,contract:'0xD891dc80535e885E5893B8139902F90F6aBA086b' }} }));
   await page.route('**/api/dc2/me', route => route.fulfill({json:{authenticated:true,user:{id:98765,login:'new-dev'},
     checkedAt:1794480000, refreshAfter:0,
-    eligibility:{eligible:false,checks:{age:false,stars:false,prs:false,followers:true}},
+    eligibility:{eligible:false,checks:{age:false,stars:false,prs:null,followers:true}},
     evidence:{daysOld:500,createdAt:'2025-01-01T00:00:00Z',publicNonForkReposObserved:2,
       rawStarsObserved:3,externalMergedPRsObserved:null,followersObserved:11,
       coverage:{reposComplete:true,prsComplete:false}}
@@ -136,6 +136,27 @@ test('realistic qualifying account data shows all four passed, never the fake fa
     assert.equal(await page.locator('#'+id).getAttribute('data-state'),'pass');
   await page.locator('#consent').check();
   assert.equal(await page.locator('#enroll').isEnabled(),true);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+
+
+test('missing age evidence shows only age unknown; passing Star, PR and followers stay green', async () => {
+  const {page,context,errors}=await pageFor(true);
+  await page.route('**/api/dc2/config',route=>route.fulfill({json:{loginReady:true,eligibilityApi:'v1',
+    issuance:{enabled:true,chainId:42161,contract:'0xD891dc80535e885E5893B8139902F90F6aBA086b'}}}));
+  await page.route('**/api/dc2/me',route=>route.fulfill({json:{authenticated:true,
+    user:{id:1884104,login:'picasso250'},checkedAt:1794480000,refreshAfter:0,
+    eligibility:{eligible:false,checks:{age:null,stars:true,prs:true,followers:true}},
+    evidence:{daysOld:5260,publicNonForkReposObserved:204,rawStarsObserved:762,
+      externalMergedPRsObserved:37,followersObserved:153,
+      coverage:{reposComplete:true,prsComplete:false}}}}));
+  await page.reload();
+  assert.equal(await page.locator('#check-age').getAttribute('data-state'),'unknown');
+  for(const id of ['check-stars','check-prs','check-followers'])
+    assert.equal(await page.locator('#'+id).getAttribute('data-state'),'pass');
+  await page.locator('#consent').check();
+  assert.equal(await page.locator('#enroll').isDisabled(),true);
   assert.deepEqual(errors,[]);
   await context.close();
 });

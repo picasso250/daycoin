@@ -20,27 +20,27 @@ function validWallet(address) {
 export function candidateEligibility(session, epochSeconds) {
   const evidence = session?.evidence;
   const githubId = session?.uid;
-  if (!Number.isSafeInteger(githubId) || githubId <= 0 || !evidence) return { eligible: false, reason: 'missing_identity' };
-  const createdAt = evidence.createdAt;
-  if (typeof createdAt !== 'string' || !Number.isFinite(Date.parse(createdAt))) {
-    return { eligible: false, reason: 'requires_fresh_login' };
+  const hasIdentity = Number.isSafeInteger(githubId) && githubId > 0;
+  const createdAt = evidence?.createdAt;
+  const createdMs = typeof createdAt === 'string' ? Date.parse(createdAt) : NaN;
+  // Each result is independent: true = passes, false = insufficient, null = unknown.
+  // Missing identity or evidence must never grant permission to issue a voucher.
+  let age = null;
+  if (Number.isFinite(createdMs) && Number.isFinite(epochSeconds)) {
+    const birth = new Date(createdMs);
+    const anniversary = new Date(createdMs);
+    anniversary.setUTCFullYear(birth.getUTCFullYear() + 7);
+    age = epochSeconds * 1000 >= anniversary.getTime();
   }
-  const cutoff = new Date(epochSeconds * 1000);
-  const birth = new Date(createdAt);
-  const anniversary = new Date(birth);
-  anniversary.setUTCFullYear(birth.getUTCFullYear() + 7);
-  const age = cutoff >= anniversary;
-  // These represent documented observed counts, NOT an audit of every star/PR.
-  const stars = evidence.rawStarsObserved;
-  const prs = evidence.externalMergedPRsObserved;
-  const followers = evidence.followersObserved;
+  const threshold = count => Number.isSafeInteger(count) && count >= 0 ? count >= 10 : null;
   const checks = {
     age,
-    stars: Number.isSafeInteger(stars) && stars >= 10,
-    prs: Number.isSafeInteger(prs) && prs >= 10,
-    followers: Number.isSafeInteger(followers) && followers >= 10,
+    stars: threshold(evidence?.rawStarsObserved),
+    prs: threshold(evidence?.externalMergedPRsObserved),
+    followers: threshold(evidence?.followersObserved),
   };
-  return { eligible: Object.values(checks).every(Boolean), checks, policy: 'candidate-v0.2', githubId };
+  const eligible = hasIdentity && Object.values(checks).every(value => value === true);
+  return { eligible, checks, policy: 'candidate-v0.2', githubId: hasIdentity ? githubId : null };
 }
 
 function configuration(env, expectedIssuer = MAINNET_ISSUER, expectedContract = MAINNET_CONTRACT) {

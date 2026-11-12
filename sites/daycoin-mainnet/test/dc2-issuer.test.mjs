@@ -31,6 +31,42 @@ test('seven-year and 10/10/10 gate fails closed on missing or inadequate server 
   }
 });
 
+test('four eligibility checks are independent; one unknown never hides three valid checks', async () => {
+  const withoutDate = { ...session, evidence: { ...session.evidence, createdAt: undefined } };
+  const noAge = candidateEligibility(withoutDate, now);
+  assert.deepEqual(noAge.checks, { age: null, stars: true, prs: true, followers: true });
+  assert.equal(noAge.eligible, false);
+  assert.equal((await post('prepare', { wallet: claimant.address }, env, withoutDate)).status, 403);
+
+  const noPr = candidateEligibility({ ...session, evidence: { ...session.evidence, externalMergedPRsObserved: null } }, now);
+  assert.deepEqual(noPr.checks, { age: true, stars: true, prs: null, followers: true });
+  assert.equal(noPr.eligible, false);
+
+  const onlyFollowersBelow = candidateEligibility({ ...session, evidence: { ...session.evidence, followersObserved: 9 } }, now);
+  assert.deepEqual(onlyFollowersBelow.checks, { age: true, stars: true, prs: true, followers: false });
+  assert.equal(onlyFollowersBelow.eligible, false);
+
+  const allExactlyTen = candidateEligibility({ ...session, evidence: {
+    ...session.evidence, rawStarsObserved: 10, externalMergedPRsObserved: 10, followersObserved: 10
+  } }, now);
+  assert.equal(allExactlyTen.eligible, true);
+  assert.deepEqual(allExactlyTen.checks, { age: true, stars: true, prs: true, followers: true });
+});
+
+test('unknown or invalid counts never become approval, regardless of other thresholds', () => {
+  for (const value of [null, undefined, -1, 10.5, '10', NaN]) {
+    const result = candidateEligibility({ ...session, evidence: { ...session.evidence, rawStarsObserved: value } }, now);
+    assert.equal(result.checks.stars, null);
+    assert.equal(result.checks.age, true);
+    assert.equal(result.checks.prs, true);
+    assert.equal(result.checks.followers, true);
+    assert.equal(result.eligible, false);
+  }
+  const noIdentity = candidateEligibility({ ...session, uid: null }, now);
+  assert.equal(noIdentity.eligible, false);
+  assert.deepEqual(noIdentity.checks, { age: true, stars: true, prs: true, followers: true });
+});
+
 test('testnet attestation is disabled without all explicit configuration', async () => {
   assert.equal(issuerStatus({}).enabled, false);
   const result = await post('prepare', { wallet: claimant.address }, {});
