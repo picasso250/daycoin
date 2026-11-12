@@ -118,3 +118,24 @@ test('contract details and exact thresholds are public before GitHub login', asy
   assert.deepEqual(errors,[]);
   await context.close();
 });
+
+
+test('realistic qualifying account data shows all four passed, never the fake failure state', async () => {
+  const {page,context,errors}=await pageFor(true);
+  await page.route('**/api/dc2/config',route=>route.fulfill({json:{loginReady:true,eligibilityApi:'v1',
+    issuance:{enabled:true,chainId:42161,contract:'0xD891dc80535e885E5893B8139902F90F6aBA086b'}}}));
+  await page.route('**/api/dc2/me',route=>route.fulfill({json:{authenticated:true,
+    user:{id:1884104,login:'picasso250'},checkedAt:1794480000,refreshAfter:0,
+    eligibility:{eligible:true,checks:{age:true,stars:true,prs:true,followers:true}},
+    evidence:{createdAt:'2012-06-01T00:00:00Z',daysOld:5260,
+      publicNonForkReposObserved:204,rawStarsObserved:764,externalMergedPRsObserved:37,
+      followersObserved:154,coverage:{reposComplete:true,prsComplete:false}}}}));
+  await page.reload();
+  assert.match(await page.locator('#qualification-summary').innerText(),/符合登记门槛/);
+  for(const id of ['check-age','check-stars','check-prs','check-followers'])
+    assert.equal(await page.locator('#'+id).getAttribute('data-state'),'pass');
+  await page.locator('#consent').check();
+  assert.equal(await page.locator('#enroll').isEnabled(),true);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
