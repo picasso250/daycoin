@@ -53,7 +53,18 @@ test('D1 failure prevents false success and Analytics Engine write', async () =>
   assert.equal((await send(safe)).status, 503);
   assert.equal(points.length, 0);
 });
-test('static assets are forwarded to the assets binding', async () => {
+test('DC2 becomes homepage, while DC1 remains accessible at /dc1/', async () => {
   const { env } = create();
-  assert.equal(await (await worker.fetch(new Request('https://daycoin.io99.xyz/'), env)).text(), 'static-ok');
+  const root = await worker.fetch(new Request('https://daycoin.io99.xyz/'), env);
+  assert.equal(root.status, 302);
+  assert.equal(root.headers.get('Location'), '/dc2/');
+  const urls = [];
+  env.ASSETS.fetch = async (req) => { urls.push(new URL(req.url).pathname); return new Response('dc1-page'); };
+  assert.equal(await (await worker.fetch(new Request('https://daycoin.io99.xyz/dc1/'), env)).text(), 'dc1-page');
+  assert.deepEqual(urls, ['/dc1/']);
+});
+
+test('other static assets are forwarded to the assets binding', async () => {
+  const { env } = create();
+  assert.equal(await (await worker.fetch(new Request('https://daycoin.io99.xyz/styles.css'), env)).text(), 'static-ok');
 });

@@ -13,6 +13,12 @@ const json = (message, status) => new Response(message, { status, headers: { 'Ca
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if ((url.pathname === '/' || url.pathname === '/index.html') && request.method === 'GET') {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: '/dc2/', 'Cache-Control': 'no-store' }
+      });
+    }
     if (url.pathname.startsWith('/api/dc2/')) return handleDc2(request, env);
     if (url.pathname !== '/api/journey') return env.ASSETS.fetch(request);
     if (request.method !== 'POST') return json('Method not allowed', 405);

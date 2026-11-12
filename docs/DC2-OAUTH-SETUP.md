@@ -1,6 +1,6 @@
 # DC2 GitHub OAuth 上线配置
 
-DC2 技术预览：`https://daycoin.io99.xyz/dc2/`
+DayCoin 品牌首页：`https://daycoin.io99.xyz/` → DC2 技术预览：`https://daycoin.io99.xyz/dc2/`；DC1 历史版：`https://daycoin.io99.xyz/dc1/`
 
 目前采用零框架静态 HTML + ES Modules，复用原有 Cloudflare Worker，尚未部署 DC2 代币合约。服务器端实现了 GitHub OAuth 登录；未配置 OAuth 密钥时页面仍可访问，但登录按钮不可用，不会假装已经成功连接。
 
@@ -8,7 +8,7 @@ DC2 技术预览：`https://daycoin.io99.xyz/dc2/`
 
 1. 在 GitHub 登录开发者账号，前往 **Settings → Developer settings → OAuth Apps → New OAuth App**。
 2. Application name: `DayCoin 2 Preview`（可以自定义）。
-3. Homepage URL: `https://daycoin.io99.xyz/dc2/`
+3. Homepage URL: `https://daycoin.io99.xyz/` （品牌首页，当前 302 跳转到 DC2）
 4. Authorization callback URL: `https://daycoin.io99.xyz/api/dc2/callback`
 5. 创建后获取 Client ID 和新建 Client Secret。**Secret 只配置给 Cloudflare Worker，不能放在静态前端、Git 仓库、聊天消息或截图里。**
 

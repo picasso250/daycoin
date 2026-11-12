@@ -85,3 +85,7 @@ This is a website/document change only. Do not redeploy DC1, modify deployed pro
 ## DC2 technical preview
 
 The separate zero-framework DC2 preview lives at `/dc2/`. For OAuth configuration and rollout limitations, see [DC2 OAuth setup](../../docs/DC2-OAUTH-SETUP.md). The preview does **not** issue DC2 tokens.
+
+## Homepage version routing (2026-11-12)
+
+The root `/` redirects to `/dc2/`. The existing Ethereum DC1 wallet remains at `/dc1/`, with the historic Chinese page `/zh/`. The Cloudflare build copies the generated DC1 home to `/dc1/index.html`. OAuth Homepage URL uses the stable domain root; callback stays `/api/dc2/callback`.
