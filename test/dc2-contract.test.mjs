@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BrowserProvider, ContractFactory, Wallet, parseEther, keccak256, toUtf8Bytes } from 'ethers';
+import { BrowserProvider, ContractFactory, Wallet, parseEther } from 'ethers';
 import { compile } from '../scripts/compile.mjs';
 import { readFileSync } from 'node:fs';
 
@@ -24,22 +24,21 @@ async function fixture(t) {
   await token.waitForDeployment();
   const chainId=(await provider.getNetwork()).chainId;
   const domain={ name:'DayCoin V2',version:'1',chainId,verifyingContract:await token.getAddress() };
-  const types={ Enroll:[{name:'identity',type:'bytes32'},{name:'recipient',type:'address'},{name:'deadline',type:'uint256'}] };
-  const id=name=>keccak256(toUtf8Bytes(name));
-  const approval=async (identity,recipient,deadline=2100000000, signer=issuer, domainOverride=domain) =>
-    signer.signTypedData(domainOverride,types,{identity,recipient,deadline});
+  const types={ Enroll:[{name:'githubId',type:'uint256'},{name:'recipient',type:'address'},{name:'deadline',type:'uint256'}] };
+  const approval=async (githubId,recipient,deadline=2100000000, signer=issuer, domainOverride=domain) =>
+    signer.signTypedData(domainOverride,types,{githubId,recipient,deadline});
   const send=async tx=>(await tx).wait();
   const advance=async seconds=>{
     await rpc.request({method:'evm_increaseTime',params:[seconds]});
     await rpc.request({method:'evm_mine',params:[]});
   };
   t.after(async()=>{provider.destroy();await rpc.disconnect();});
-  return {alice,bob,issuer,token,id,approval,send,advance,domain};
+  return {alice,bob,issuer,token,approval,send,advance,domain};
 }
 
 test('valid signed identity enrolls once and starts 1 DC2/day only afterward',async t=>{
-  const {alice,token,id,approval,send,advance}=await fixture(t);
-  const identity=id('identity-one');
+  const {alice,token,approval,send,advance}=await fixture(t);
+  const identity=1884104n;
   await advance(DAY*10);
   assert.equal(await token.pending(alice.address),0n);
   await send(token.register(identity,2100000000,await approval(identity,alice.address)));
@@ -55,16 +54,16 @@ test('valid signed identity enrolls once and starts 1 DC2/day only afterward',as
 });
 
 test('identity and wallet cannot register twice, even with another signed voucher',async t=>{
-  const {alice,bob,token,id,approval,send}=await fixture(t);
-  const identity=id('single-identity'), other=id('other');
+  const {alice,bob,token,approval,send}=await fixture(t);
+  const identity=1884104n, other=9876543n;
   await send(token.register(identity,2100000000,await approval(identity,alice.address)));
   await assert.rejects(token.connect(bob).register(identity,2100000000,await approval(identity,bob.address)));
   await assert.rejects(token.register(other,2100000000,await approval(other,alice.address)));
 });
 
 test('fake, redirected, expired, wrong-contract and wrong-chain signatures fail',async t=>{
-  const {alice,bob,token,id,approval,domain}=await fixture(t);
-  const identity=id('identity-2');
+  const {alice,bob,token,approval,domain}=await fixture(t);
+  const identity=1884104n;
   await assert.rejects(token.connect(bob).register(identity,2100000000,await approval(identity,alice.address)));
   await assert.rejects(token.register(identity,2100000000,await approval(identity,alice.address,2100000000,Wallet.createRandom())));
   await assert.rejects(token.register(identity,1,await approval(identity,alice.address,1)));
@@ -74,8 +73,8 @@ test('fake, redirected, expired, wrong-contract and wrong-chain signatures fail'
 });
 
 test('fractional issuance, repeated claims and transfer preserve total entitlement',async t=>{
-  const {alice,bob,token,id,approval,send,advance}=await fixture(t);
-  const identity=id('partial');
+  const {alice,bob,token,approval,send,advance}=await fixture(t);
+  const identity=1884104n;
   await send(token.register(identity,2100000000,await approval(identity,alice.address)));
   await advance(DAY/2);
   assert.equal(await token.pending(alice.address),ONE/2n);
@@ -94,4 +93,13 @@ test('contract exposes no owner, arbitrary mint, revoke or change-issuer operati
   for(const name of ['owner','mint','revoke','setIssuer','pause','upgradeTo','transferPosition']) {
     assert.equal(token.interface.getFunction(name),null);
   }
+});
+
+test('GitHub numeric ID is exposed transparently and zero ID cannot register', async t => {
+  const {alice,token,approval,send}=await fixture(t);
+  const githubId=1884104n;
+  await assert.rejects(token.register(0n,2100000000,await approval(0n,alice.address)));
+  await send(token.register(githubId,2100000000,await approval(githubId,alice.address)));
+  assert.equal(await token.githubIdOf(alice.address),githubId);
+  assert.equal((await token.positions(githubId)).recipient,alice.address);
 });
