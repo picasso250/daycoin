@@ -17,7 +17,7 @@ const contractCall = async (provider, signature, parameter) => {
   const args = parameter === undefined ? '' : parameter;
   return unpack(await provider.request({method:'eth_call',params:[{to:DC2_CONTRACT,data:signature + args},'latest']}));
 };
-export function formatDC2(wei, digits = 6) {
+export function formatDC2(wei, digits = 5) {
   const value = BigInt(wei);
   const whole = value / RATE;
   const decimal = (value % RATE).toString().padStart(18,'0').slice(0,digits).replace(/0+$/,'');

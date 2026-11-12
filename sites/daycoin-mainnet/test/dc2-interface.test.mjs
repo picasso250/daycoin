@@ -195,6 +195,7 @@ test('registered wallet automatically shows live balance and Claim after GitHub 
   assert.equal(await page.locator('#wallet-balance').innerText(),'2');
   assert.equal(await page.locator('#wallet-pending').innerText(),'0.5');
   assert.equal(await page.locator('#claim').isEnabled(),true);
+  assert.equal(await page.locator('#wallet-reload').count(),0);
   assert.equal(await page.locator('#enrollment').isVisible(),false);
   assert.match(await page.locator('#wallet-identity').innerText(),/GitHub ID 1884104/);
   assert.deepEqual(errors,[]);

@@ -9,7 +9,7 @@ test('time accrual is integer precision, independent of claims and display round
  assert.equal(accrued(pos,1794480351),0n);
  assert.equal(accrued(pos,1794480351+86400),10n**18n);
  assert.equal(formatDC2(accrued(pos,1794480351+43200)),'0.5');
- assert.equal(formatDC2(1234567890000000000n),'1.234567');
+ assert.equal(formatDC2(1234567890000000000n),'1.23456');
  assert.equal(accrued({...pos,minted:10n**18n},1794480351+43200),0n);
 });
 test('wallet read identifies actual registration and balances from chain, not GitHub UI',async()=>{

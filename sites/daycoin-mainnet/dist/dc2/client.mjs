@@ -84,7 +84,6 @@ async function updateWallet(prompt = false) {
   }
 }
 walletButton.addEventListener('click', () => updateWallet(true));
-$('wallet-reload').addEventListener('click', () => updateWallet(false));
 claimButton.addEventListener('click', async () => {
   if (walletBusy || pendingTransaction || !positionSnapshot?.registered || !walletState || walletState.wrongNetwork) return;
   const accountAddress=walletState.address;
