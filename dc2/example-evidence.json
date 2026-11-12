@@ -1,8 +1,7 @@
 {
   "githubId": 1234567,
-  "createdAt": "2020-01-01T00:00:00Z",
-  "publicNonForkRepos": 2,
-  "independentStars": 0,
-  "externalMergedPRs": 1,
-  "contributionMonths": 8
+  "createdAt": "2016-01-01T00:00:00Z",
+  "independentStars": 12,
+  "externalMergedPRs": 15,
+  "followers": 11
 }

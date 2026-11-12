@@ -42,6 +42,7 @@ async function refresh() {
       $('repos').textContent = format(evidence.publicNonForkReposObserved);
       $('stars').textContent = format(evidence.rawStarsObserved);
       $('prs').textContent = format(evidence.externalMergedPRsObserved);
+      $('followers').textContent = format(evidence.followersObserved);
       const partial = [];
       if (!evidence.coverage.reposComplete) partial.push('仓库数据只获取到部分样本');
       if (!evidence.coverage.prsComplete) partial.push('PR 数据不是完整历史');

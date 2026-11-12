@@ -1,53 +1,54 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateEligibility, EXPERIMENTAL_RULES } from '../dc2/eligibility.mjs';
+import { evaluateEligibility, INITIAL_RULES, isRelaxation } from '../dc2/eligibility.mjs';
 
 const asOf = '2026-11-12T00:00:00Z';
 const example = {
   githubId: 1234567,
-  createdAt: '2020-01-01T00:00:00Z',
-  publicNonForkRepos: 2,
-  independentStars: 0,
-  externalMergedPRs: 1,
-  contributionMonths: 8
+  createdAt: '2016-01-01T00:00:00Z',
+  independentStars: 10,
+  externalMergedPRs: 10,
+  followers: 10,
 };
 const check = (patch = {}, opts = {}) => evaluateEligibility({ ...example, ...patch }, { asOf, ...opts });
 
-test('old maintainer qualifies with multiple paths and no stars', () => {
+test('four inclusive thresholds must ALL pass', () => {
   const result = check();
   assert.equal(result.eligible, true);
-  assert.equal(result.signalCount, 3);
+  assert.deepEqual(Object.values(result.checks), [true, true, true, true]);
   assert.equal(result.advisoryOnly, true);
+  for (const [field, value] of [
+    ['createdAt', '2020-01-01T00:00:00Z'],
+    ['independentStars', 9],
+    ['externalMergedPRs', 9],
+    ['followers', 9],
+  ]) assert.equal(check({ [field]: value }).eligible, false, field);
 });
 
-test('age is a mandatory floor even with all activity signals', () => {
-  assert.equal(check({ createdAt: '2026-01-01T00:00:00Z', independentStars: 100 }).eligible, false);
+test('seven calendar years respect anniversary rather than rough day count', () => {
+  assert.equal(check({ createdAt: '2019-11-12T00:00:00Z' }).eligible, true);
+  assert.equal(check({ createdAt: '2019-11-12T00:00:01Z' }).eligible, false);
 });
 
-test('old empty accounts do not qualify', () => {
-  assert.equal(check({ publicNonForkRepos: 0, independentStars: 0, externalMergedPRs: 0, contributionMonths: 0 }).eligible, false);
+test('old but inactive accounts do not pass', () => {
+  assert.equal(check({ independentStars: 0, externalMergedPRs: 0, followers: 0 }).eligible, false);
 });
 
-test('one signal alone cannot pass', () => {
-  assert.equal(check({ publicNonForkRepos: 0, externalMergedPRs: 0, contributionMonths: 0, independentStars: 5 }).eligible, false);
+test('candidate thresholds are configurable, future relaxations are monotone', () => {
+  assert.equal(isRelaxation(INITIAL_RULES, { ...INITIAL_RULES, minExternalMergedPRs: 5 }), true);
+  assert.equal(isRelaxation(INITIAL_RULES, { ...INITIAL_RULES, minFollowers: 11 }), false);
+  assert.equal(check({ externalMergedPRs: 5 }, { rules: { ...INITIAL_RULES, minExternalMergedPRs: 5 } }).eligible, true);
 });
 
-test('configurable rules are not baked into program logic', () => {
-  const strict = { ...EXPERIMENTAL_RULES, minSignals: 4 };
-  assert.equal(check({}, { rules: strict }).eligible, false);
-});
-
-test('stable numeric ID required, time cannot run backwards', () => {
+test('invalid GitHub ID, invalid dates and missing metrics fail closed', () => {
   assert.throws(() => check({ githubId: 0 }), /githubId/);
   assert.throws(() => check({ githubId: '123' }), /githubId/);
   assert.throws(() => check({ createdAt: '2028-01-01T00:00:00Z' }), /cutoff/);
-});
-
-test('unknown or missing metrics must not silently become zero', () => {
   assert.throws(() => check({ independentStars: undefined }), /independentStars/);
   assert.throws(() => check({ externalMergedPRs: -1 }), /externalMergedPRs/);
+  assert.throws(() => check({ followers: undefined }), /followers/);
 });
 
-test('result is stable across repeated evaluation at fixed cutoff', () => {
+test('fixed input and cutoff give deterministic output', () => {
   assert.deepEqual(check(), check());
 });

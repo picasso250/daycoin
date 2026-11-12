@@ -23,7 +23,7 @@ const fixture = (url) => {
     return Response.json({ access_token: 'never-send-to-browser' });
   }
   if (endpoint.pathname === '/user') {
-    return Response.json({ id: 4242, login: 'sample-dev', created_at: '2020-01-01T00:00:00Z' });
+    return Response.json({ id: 4242, login: 'sample-dev', followers: 42, created_at: '2020-01-01T00:00:00Z' });
   }
   if (endpoint.pathname === '/users/sample-dev/repos') {
     return Response.json([
@@ -89,6 +89,7 @@ test('successful OAuth creates a signed public-only summary cookie', async () =>
   assert.equal(body.user.id, 4242);
   assert.equal(body.evidence.publicNonForkReposObserved, 1);
   assert.equal(body.evidence.rawStarsObserved, 12);
+  assert.equal(body.evidence.followersObserved, 42);
   assert.equal(body.evidence.externalMergedPRsObserved, 1);
   assert.equal(body.evidence.coverage.starsIndependent, false);
   const forged = session.slice(0, -6) + 'aaaaaa';

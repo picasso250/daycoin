@@ -95,6 +95,7 @@ async function publicEvidence(fetcher, user, token, now) {
   const daysOld = Math.max(0, Math.floor((now * 1000 - Date.parse(user.created_at)) / 86400000));
   return {
     daysOld,
+    followersObserved: Number.isSafeInteger(user.followers) && user.followers >= 0 ? user.followers : null,
     publicNonForkReposObserved: reposComplete ? own.length : own.length,
     rawStarsObserved: reposComplete ? stars : stars,
     externalMergedPRsObserved: externalMergedPRs,

@@ -1,76 +1,80 @@
 /**
- * DC2 offline eligibility prototype.
- *
- * Inputs are pre-validated observations, NOT authoritative GitHub evidence.
- * Passing this function is never itself an issuance credential.
+ * DC2 candidate eligibility, v0.2.
+ * All four thresholds are required (AND); permanent on-chain admission
+ * is a separate process. Inputs MUST be independently verified evidence.
  */
-export const EXPERIMENTAL_RULES = Object.freeze({
-  minAccountAgeDays: 365 * 2,
-  minSignals: 2,
-  minPublicNonForkRepos: 2,
-  minIndependentStars: 5,
-  minExternalMergedPRs: 1,
-  minContributionMonths: 6,
+export const INITIAL_RULES = Object.freeze({
+  minAccountAgeYears: 7,
+  minIndependentStars: 10,
+  minExternalMergedPRs: 10,
+  minFollowers: 10,
 });
+export const EXPERIMENTAL_RULES = INITIAL_RULES;
 
-function count(value, label) {
+function integer(value, label) {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new TypeError(`${label} must be a nonnegative safe integer`);
   }
   return value;
 }
+function utcDate(value, label) {
+  if (typeof value !== 'string' || !/^\d{4}-\d\d-\d\dT/.test(value) ||
+      !Number.isFinite(Date.parse(value))) {
+    throw new TypeError(`${label} must be an ISO datetime`);
+  }
+  return new Date(value);
+}
+function fullYearsSince(created, cutoff) {
+  let years = cutoff.getUTCFullYear() - created.getUTCFullYear();
+  const anniversary = new Date(created);
+  anniversary.setUTCFullYear(created.getUTCFullYear() + years);
+  if (anniversary > cutoff) years--;
+  return years;
+}
 
 /**
- * @param {object} account - normalized, independently verified evidence
- * @param {number} account.githubId - stable numeric GitHub user ID
- * @param {string} account.createdAt - GitHub creation time (ISO8601)
- * @param {number} account.publicNonForkRepos
- * @param {number} account.independentStars - verified independent stars (NOT raw API stars)
- * @param {number} account.externalMergedPRs - merged into independent third-party repos
- * @param {number} account.contributionMonths - distinct months with verified contributions
- * @param {object} options
- * @param {string} options.asOf - fixed evidence cutoff, not current local time
- * @param {object} [options.rules]
+ * Evaluate normalized evidence. Does not issue a token or grant permanent eligibility.
+ * @param {object} account
+ * @param {number} account.githubId GitHub stable numeric user ID
+ * @param {string} account.createdAt original creation timestamp
+ * @param {number} account.independentStars verified stars on original owned repos
+ * @param {number} account.externalMergedPRs verified merged PRs to third-party repos
+ * @param {number} account.followers GitHub profile follower count
+ * @param {{asOf:string,rules?:object}} options stable evaluation cutoff and rules
  */
-export function evaluateEligibility(account, { asOf, rules = EXPERIMENTAL_RULES } = {}) {
+export function evaluateEligibility(account, { asOf, rules = INITIAL_RULES } = {}) {
   if (!account || typeof account !== 'object' || Array.isArray(account)) {
     throw new TypeError('account object required');
   }
-  const githubId = count(account.githubId, 'githubId');
+  const githubId = integer(account.githubId, 'githubId');
   if (githubId === 0) throw new TypeError('githubId must be positive');
-  const cutoff = Date.parse(asOf);
-  const created = Date.parse(account.createdAt);
-  if (!Number.isFinite(cutoff) || !Number.isFinite(created)) {
-    throw new TypeError('asOf and createdAt must be valid ISO date strings');
-  }
+  const cutoff = utcDate(asOf, 'asOf');
+  const created = utcDate(account.createdAt, 'createdAt');
   if (created > cutoff) throw new RangeError('account cannot be created after cutoff');
-  const daysOld = Math.floor((cutoff - created) / 86_400_000);
-  const observed = {
-    publicNonForkRepos: count(account.publicNonForkRepos, 'publicNonForkRepos'),
-    independentStars: count(account.independentStars, 'independentStars'),
-    externalMergedPRs: count(account.externalMergedPRs, 'externalMergedPRs'),
-    contributionMonths: count(account.contributionMonths, 'contributionMonths'),
+  for (const key of Object.keys(INITIAL_RULES)) integer(rules[key], `rules.${key}`);
+
+  const values = {
+    accountAgeYears: fullYearsSince(created, cutoff),
+    independentStars: integer(account.independentStars, 'independentStars'),
+    externalMergedPRs: integer(account.externalMergedPRs, 'externalMergedPRs'),
+    followers: integer(account.followers, 'followers'),
   };
-  for (const key of Object.keys(EXPERIMENTAL_RULES)) {
-    count(rules[key], `rules.${key}`);
-  }
-  const signals = {
-    publicNonForkRepos: observed.publicNonForkRepos >= rules.minPublicNonForkRepos,
-    independentStars: observed.independentStars >= rules.minIndependentStars,
-    externalMergedPRs: observed.externalMergedPRs >= rules.minExternalMergedPRs,
-    contributionMonths: observed.contributionMonths >= rules.minContributionMonths,
+  const checks = {
+    accountAge: values.accountAgeYears >= rules.minAccountAgeYears,
+    independentStars: values.independentStars >= rules.minIndependentStars,
+    externalMergedPRs: values.externalMergedPRs >= rules.minExternalMergedPRs,
+    followers: values.followers >= rules.minFollowers,
   };
-  const signalCount = Object.values(signals).filter(Boolean).length;
-  const agePass = daysOld >= rules.minAccountAgeDays;
   return {
-    githubId,
-    asOf,
-    daysOld,
-    agePass,
-    signalCount,
-    signals,
-    eligible: agePass && signalCount >= rules.minSignals,
-    ruleVersion: 'experimental-0.1',
+    githubId, asOf, values, checks,
+    eligible: Object.values(checks).every(Boolean),
+    ruleVersion: 'initial-0.2',
     advisoryOnly: true,
   };
+}
+
+/** Later rule versions may only reduce thresholds, never raise them. */
+export function isRelaxation(previous, next) {
+  return Object.keys(INITIAL_RULES).every(key =>
+    Number.isSafeInteger(next[key]) && next[key] >= 0 && next[key] <= previous[key]);
 }
