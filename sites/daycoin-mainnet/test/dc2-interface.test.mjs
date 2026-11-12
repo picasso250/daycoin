@@ -65,3 +65,20 @@ test('ready refresh click displays loading and starts OAuth redirect', async () 
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+
+test('mainnet consent remains required even if issuer is ready', async () => {
+  const { page, context, errors } = await pageFor(true);
+  // Reload to use the production-shaped issuer config.
+  await page.route('**/api/dc2/config', route => route.fulfill({ json: {
+    loginReady: true, issuance: { enabled: true, chainId: 42161,
+      contract: '0xD891dc80535e885E5893B8139902F90F6aBA086b' }
+  } }));
+  await page.reload();
+  assert.equal(await page.locator('#enroll').isDisabled(), true);
+  await page.locator('#consent').check();
+  assert.equal(await page.locator('#enroll').isEnabled(), true);
+  assert.match(await page.locator('#enrollment-hint').innerText(), /Arbitrum One/);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

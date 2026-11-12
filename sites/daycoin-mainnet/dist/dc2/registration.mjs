@@ -1,6 +1,6 @@
 // Minimal wallet interaction, no framework or third-party browser SDK.
-// Arbitrum Sepolia only; token has not yet been deployed.
-const CHAIN_HEX = '0x66eee'; // 421614
+// Immutable DC2 contract on Arbitrum One.
+const CHAIN_HEX = '0xa4b1'; // 42161
 const REGISTER_SELECTOR = 'a050d719'; // keccak256("register(uint256,uint256,bytes)")[0:4]
 const word = n => BigInt(n).toString(16).padStart(64, '0');
 
@@ -20,8 +20,8 @@ async function requestJson(path, payload) {
   return body;
 }
 
-export async function beginTestnetRegistration(config, setStatus) {
-  if (!config?.enabled || !config.contract) throw new Error('Testnet enrollment is not enabled');
+export async function beginMainnetRegistration(config, setStatus) {
+  if (!config?.enabled || !config.contract) throw new Error('Mainnet enrollment is not enabled');
   if (!window.ethereum?.request) throw new Error('No Ethereum wallet detected');
   const wallet = window.ethereum;
   setStatus('正在连接钱包…');
@@ -38,16 +38,16 @@ export async function beginTestnetRegistration(config, setStatus) {
   const prepare = await requestJson('prepare', { wallet: address });
   setStatus('请在钱包里签署身份绑定消息（不会产生链上交易）…');
   const signature = await wallet.request({ method: 'personal_sign', params: [prepare.message, address] });
-  setStatus('正在向 DC2 测试签发者申请资格…');
+  setStatus('正在向 DC2 签发者申请资格…');
   const voucher = await requestJson('attest', { wallet: address, challengeToken: prepare.challengeToken, signature });
   if (String(voucher.values.recipient).toLowerCase() !== address.toLowerCase() ||
       voucher.domain.verifyingContract.toLowerCase() !== config.contract.toLowerCase() ||
-      Number(voucher.domain.chainId) !== 421614) throw new Error('Voucher mismatch');
+      Number(voucher.domain.chainId) !== 42161) throw new Error('Voucher mismatch');
   const data = encodeRegistration(voucher.values.githubId, voucher.values.deadline, voucher.signature);
-  setStatus('请在钱包中确认 Arbitrum Sepolia 测试网登记交易…');
+  setStatus('请在钱包中确认 Arbitrum One 主网登记交易…');
   const hash = await wallet.request({ method: 'eth_sendTransaction', params: [{
     from: address, to: config.contract, data, value: '0x0'
   }] });
-  setStatus('测试网登记交易已提交：' + hash);
+  setStatus('主网登记交易已提交：' + hash);
   return hash;
 }

@@ -84,7 +84,7 @@ This is a website/document change only. Do not redeploy DC1, modify deployed pro
 
 ## DC2 technical preview
 
-The separate zero-framework DC2 preview lives at `/dc2/`. For OAuth configuration and rollout limitations, see [DC2 OAuth setup](../../docs/DC2-OAUTH-SETUP.md). The preview does **not** issue DC2 tokens.
+The zero-framework DC2 site lives at `/dc2/`. The verified immutable ERC-20 is deployed on Arbitrum One at `0xD891dc80535e885E5893B8139902F90F6aBA086b`. For OAuth configuration see [DC2 OAuth setup](../../docs/DC2-OAUTH-SETUP.md). Live enrollment requires `DC2_MAINNET_ISSUANCE_ENABLED=true` and a Cloudflare Worker secret `DC2_MAINNET_ISSUER_PRIVATE_KEY` matching immutable issuer `0x806918b917a89956B8AF1a2897940c475973E2d3`; no private key is bundled into the website or Git. Disable signing by removing the enable flag. Registrants pay their own L2 gas and irrevocably publish their GitHub ID ↔ wallet association.
 
 ## Homepage version routing (2026-11-12)
 

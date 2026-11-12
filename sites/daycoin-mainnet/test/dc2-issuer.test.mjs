@@ -6,11 +6,9 @@ import { candidateEligibility, handleIssuance, issuerStatus } from '../dc2-issue
 const now = 1794480000;
 const issuer = Wallet.createRandom();
 const claimant = Wallet.createRandom();
-const target = '0x' + 'ab'.repeat(20);
 const env = {
-  DC2_TESTNET_ISSUANCE_ENABLED: 'true',
-  DC2_TESTNET_ISSUER_PRIVATE_KEY: issuer.privateKey,
-  DC2_SEPOLIA_CONTRACT: target,
+  DC2_MAINNET_ISSUANCE_ENABLED: 'true',
+  DC2_MAINNET_ISSUER_PRIVATE_KEY: issuer.privateKey,
   DC2_SESSION_SECRET: '0123456789abcdef0123456789abcdef0123456789abcdef',
 };
 const session = {
@@ -24,7 +22,7 @@ const post = async (endpoint, payload, settings = env, user = session, timestamp
   new Request('https://daycoin.io99.xyz/api/dc2/' + endpoint, {
     method: 'POST', headers: { Origin: 'https://daycoin.io99.xyz', 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
-  }), settings, user, timestamp);
+  }), settings, user, timestamp, issuer.address);
 
 test('seven-year and 10/10/10 gate fails closed on missing or inadequate server evidence', () => {
   assert.equal(candidateEligibility(session, now).eligible, true);
@@ -51,7 +49,7 @@ test('signed OAuth identity + wallet proof yields correct EIP-712 registration v
   });
   assert.equal(approval.status, 200);
   const voucher = await approval.json();
-  assert.equal(voucher.domain.chainId, 421614);
+  assert.equal(voucher.domain.chainId, 42161);
   assert.equal(voucher.values.githubId, '1884104');
   assert.equal(voucher.values.recipient, claimant.address);
   const signer = verifyTypedData(voucher.domain, voucher.types, voucher.values, voucher.signature);
@@ -79,6 +77,17 @@ test('cross-origin requests are forbidden even with a valid session', async () =
   const res = await handleIssuance('prepare', new Request('https://daycoin.io99.xyz/api/dc2/prepare', {
     method: 'POST', headers: { Origin: 'https://attacker.example', 'Content-Type': 'application/json' },
     body: JSON.stringify({ wallet: claimant.address })
-  }), env, session, now);
+  }), env, session, now, issuer.address);
   assert.equal(res.status, 403);
+});
+
+
+test('production cannot enable issuance with a different key', async () => {
+  const prod = {
+    DC2_MAINNET_ISSUANCE_ENABLED: 'true',
+    DC2_MAINNET_ISSUER_PRIVATE_KEY: issuer.privateKey
+  };
+  assert.equal(issuerStatus(prod).enabled, false);
+  assert.equal(issuerStatus(prod).chainId, 42161);
+  assert.equal(issuerStatus(prod).contract, '0xD891dc80535e885E5893B8139902F90F6aBA086b');
 });

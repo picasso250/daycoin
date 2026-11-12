@@ -14,7 +14,7 @@ const artifact = compile({
 
 test('OAuth-derived GitHub candidate -> wallet proof -> signed voucher -> on-chain unique permanent enrollment -> daily claim', async t => {
   const rpc = ganache.provider({
-    logging: {quiet: true}, chain: {chainId:421614, hardfork:'shanghai',time:new Date('2026-11-12T00:00:00Z')},
+    logging: {quiet: true}, chain: {chainId:42161, hardfork:'shanghai',time:new Date('2026-11-12T00:00:00Z')},
     miner: {timestampIncrement:0},wallet:{totalAccounts:3}
   });
   const provider = new BrowserProvider(rpc,undefined,{cacheTimeout:-1});
@@ -26,9 +26,8 @@ test('OAuth-derived GitHub candidate -> wallet proof -> signed voucher -> on-cha
   await token.waitForDeployment();
   const contractAddress=await token.getAddress();
   const env={
-    DC2_TESTNET_ISSUANCE_ENABLED:'true',
-    DC2_TESTNET_ISSUER_PRIVATE_KEY:issuer.privateKey,
-    DC2_SEPOLIA_CONTRACT:contractAddress,
+    DC2_MAINNET_ISSUANCE_ENABLED:'true',
+    DC2_MAINNET_ISSUER_PRIVATE_KEY:issuer.privateKey,
     DC2_SESSION_SECRET:'abcd'.repeat(12)
   };
   const user={uid:1884104,exp:2100000000,
@@ -38,7 +37,7 @@ test('OAuth-derived GitHub candidate -> wallet proof -> signed voucher -> on-cha
   const call=async (endpoint,payload)=>handleIssuance(endpoint,new Request('https://daycoin.io99.xyz/api/dc2/'+endpoint,{
     method:'POST',headers:{Origin:'https://daycoin.io99.xyz','Content-Type':'application/json'},
     body:JSON.stringify(payload)
-  }),env,user,timestamp);
+  }),env,user,timestamp,issuer.address,contractAddress);
   const wallet=await signer.getAddress();
   const prepare=await (await call('prepare',{wallet})).json();
   const privateKey = rpc.getInitialAccounts()[wallet.toLowerCase()].secretKey;

@@ -1,5 +1,5 @@
 import { handleIssuance, issuerStatus } from './dc2-issuer.mjs';
-// DC2 preview authentication. No token persistence and no issuance authority.
+// DC2 OAuth authentication. No GitHub access token persistence; signing is gated separately.
 // GitHub OAuth app credentials and the HMAC session key are Worker secrets.
 const PREFIX = '/api/dc2/';
 const STATE = '__Host-dc2_oauth';
@@ -117,7 +117,7 @@ export async function handleDc2(request, env, { fetcher = fetch, now = () => Mat
   if (url.origin !== publicOrigin) return json({ error: 'Unrecognized origin' }, 403);
   const ready = Boolean(env.DC2_GITHUB_CLIENT_ID && env.DC2_GITHUB_CLIENT_SECRET &&
     env.DC2_SESSION_SECRET && env.DC2_SESSION_SECRET.length >= 32);
-  if (path === 'config' && request.method === 'GET') return json({ loginReady: ready, network: 'Arbitrum One', preview: true, testnet: issuerStatus(env) });
+  if (path === 'config' && request.method === 'GET') return json({ loginReady: ready, network: 'Arbitrum One', preview: false, issuance: issuerStatus(env) });
   if (['issuer-status', 'prepare', 'attest'].includes(path)) {
     const session = await decodeSession(readCookie(request, SESSION), env.DC2_SESSION_SECRET, now());
     return handleIssuance(path, request, env, session, now());

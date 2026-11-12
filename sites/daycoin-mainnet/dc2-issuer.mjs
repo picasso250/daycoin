@@ -1,7 +1,9 @@
 import { Wallet, verifyMessage, getAddress } from 'ethers';
 
-// Arbitrum Sepolia only. Do not enable for Arbitrum One without independent review.
-export const TESTNET_CHAIN_ID = 421614;
+// Permanent DC2 Arbitrum One contract. Issuer is immutable on chain.
+export const MAINNET_CHAIN_ID = 42161;
+export const MAINNET_CONTRACT = '0xD891dc80535e885E5893B8139902F90F6aBA086b';
+export const MAINNET_ISSUER = '0x806918b917a89956B8AF1a2897940c475973E2d3';
 const DOMAIN = { name: 'DayCoin V2', version: '1' };
 const TYPES = {
   Enroll: [
@@ -41,11 +43,14 @@ export function candidateEligibility(session, epochSeconds) {
   return { eligible: Object.values(checks).every(Boolean), checks, policy: 'candidate-v0.2', githubId };
 }
 
-function configuration(env) {
-  const address = validWallet(env.DC2_SEPOLIA_CONTRACT || '');
-  const active = env.DC2_TESTNET_ISSUANCE_ENABLED === 'true' &&
-    Boolean(address && env.DC2_TESTNET_ISSUER_PRIVATE_KEY);
-  return { active, address };
+function configuration(env, expectedIssuer = MAINNET_ISSUER, expectedContract = MAINNET_CONTRACT) {
+  // Production calls use both fixed constants. Test harness passes isolated expected values.
+  const key = env.DC2_MAINNET_ISSUER_PRIVATE_KEY;
+  let signer = null;
+  try { if (key) signer = new Wallet(key); } catch { /* disabled on invalid secret */ }
+  const active = env.DC2_MAINNET_ISSUANCE_ENABLED === 'true' &&
+    signer?.address.toLowerCase() === expectedIssuer.toLowerCase();
+  return { active, address: expectedContract, signer };
 }
 
 async function getKey(secret) {
@@ -76,7 +81,7 @@ async function open(raw, secret) {
 
 export function issuerStatus(env) {
   const cfg = configuration(env);
-  return { enabled: cfg.active, chainId: TESTNET_CHAIN_ID, contract: cfg.address };
+  return { enabled: cfg.active, chainId: MAINNET_CHAIN_ID, contract: cfg.address };
 }
 
 /**
@@ -85,8 +90,8 @@ export function issuerStatus(env) {
  * session, wallet, expiry, and target contract, and is valid for 5 minutes.
  * No permanent identity is granted by this handler: only register() on chain.
  */
-export async function handleIssuance(path, request, env, session, now) {
-  const cfg = configuration(env);
+export async function handleIssuance(path, request, env, session, now, expectedIssuer = MAINNET_ISSUER, expectedContract = MAINNET_CONTRACT) {
+  const cfg = configuration(env, expectedIssuer, expectedContract);
   const output = (value, status = 200) => new Response(JSON.stringify(value), {
     status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
   });
@@ -98,7 +103,7 @@ export async function handleIssuance(path, request, env, session, now) {
       request.headers.get('Content-Type')?.split(';')[0].trim() !== 'application/json') {
     return output({ error: 'invalid_origin_or_content_type' }, 403);
   }
-  if (!cfg.active) return output({ error: 'testnet_issuance_disabled' }, 503);
+  if (!cfg.active) return output({ error: 'issuance_disabled' }, 503);
   if (!session) return output({ error: 'login_required' }, 401);
   const eligibility = candidateEligibility(session, now);
   if (!eligibility.eligible) return output({ error: 'not_eligible', eligibility }, 403);
@@ -114,29 +119,29 @@ export async function handleIssuance(path, request, env, session, now) {
     const expires = now + 300;
     const challenge = {
       githubId: session.uid, wallet, exp: expires,
-      chainId: TESTNET_CHAIN_ID, contract: cfg.address,
+      chainId: MAINNET_CHAIN_ID, contract: cfg.address,
       sid: session.exp // binds to currently authenticated OAuth session
     };
     const challengeToken = await seal(challenge, env.DC2_SESSION_SECRET);
-    const message = `DayCoin 2 testnet wallet binding\nGitHub ID: ${session.uid}\nWallet: ${wallet}\nNetwork: Arbitrum Sepolia (${TESTNET_CHAIN_ID})\nContract: ${cfg.address}\nChallenge: ${challengeToken}\nExpires: ${expires}`;
+    const message = `DayCoin 2 mainnet wallet binding\nGitHub ID: ${session.uid}\nWallet: ${wallet}\nNetwork: Arbitrum One (${MAINNET_CHAIN_ID})\nContract: ${cfg.address}\nChallenge: ${challengeToken}\nExpires: ${expires}`;
     return output({ message, challengeToken, expires });
   }
   const challenge = await open(payload?.challengeToken, env.DC2_SESSION_SECRET);
   if (!challenge || challenge.githubId !== session.uid || challenge.wallet !== wallet ||
-      challenge.chainId !== TESTNET_CHAIN_ID || challenge.contract !== cfg.address ||
+      challenge.chainId !== MAINNET_CHAIN_ID || challenge.contract !== cfg.address ||
       challenge.sid !== session.exp || !Number.isSafeInteger(challenge.exp) ||
       challenge.exp < now || challenge.exp > now + 300) {
     return output({ error: 'invalid_or_expired_challenge' }, 403);
   }
-  const expectedMessage = `DayCoin 2 testnet wallet binding\nGitHub ID: ${session.uid}\nWallet: ${wallet}\nNetwork: Arbitrum Sepolia (${TESTNET_CHAIN_ID})\nContract: ${cfg.address}\nChallenge: ${payload.challengeToken}\nExpires: ${challenge.exp}`;
+  const expectedMessage = `DayCoin 2 mainnet wallet binding\nGitHub ID: ${session.uid}\nWallet: ${wallet}\nNetwork: Arbitrum One (${MAINNET_CHAIN_ID})\nContract: ${cfg.address}\nChallenge: ${payload.challengeToken}\nExpires: ${challenge.exp}`;
   try {
     if (verifyMessage(expectedMessage, payload.signature) !== wallet)
       return output({ error: 'invalid_wallet_signature' }, 403);
   } catch { return output({ error: 'invalid_wallet_signature' }, 403); }
   try {
-    const signer = new Wallet(env.DC2_TESTNET_ISSUER_PRIVATE_KEY);
+    const signer = cfg.signer;
     const deadline = now + 600;
-    const domain = { ...DOMAIN, chainId: TESTNET_CHAIN_ID, verifyingContract: cfg.address };
+    const domain = { ...DOMAIN, chainId: MAINNET_CHAIN_ID, verifyingContract: cfg.address };
     const values = { githubId: BigInt(session.uid), recipient: wallet, deadline };
     const signature = await signer.signTypedData(domain, TYPES, values);
     return output({ domain, types: TYPES, values: { githubId: String(session.uid), recipient: wallet, deadline }, signature, issuer: signer.address });

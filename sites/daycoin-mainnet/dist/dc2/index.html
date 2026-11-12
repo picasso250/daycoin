@@ -16,7 +16,7 @@
 </header>
 <main>
   <section class="hero" id="hero">
-    <div class="overline"><span class="pulse"></span> ARBITRUM ONE · 技术预览</div>
+    <div class="overline"><span class="pulse"></span> ARBITRUM ONE · 主网已部署</div>
     <h1>代码有历史。<br><em>贡献有重量。</em></h1>
     <p class="lead">DayCoin 2 探索一种面向开源建设者的每日发行机制。我们不以钱包里的资产多少判断资格，而从真实、长期的 GitHub 开发记录开始。</p>
     <div class="cta-row">
@@ -47,14 +47,15 @@
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14-5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14 5l2-2"/><path d="M20 20v-4h-4"/></svg>
       </button>
     </div>
-    <div class="note"><strong>尚不是正式资格结果</strong><p>目前为公开数据预分析，暂未部署 DC2 代币或开启测试网登记。</p></div>
+    <div class="note"><strong>资格数据来自 GitHub 公开记录</strong><p>这是 GitHub 公开资料的资格预分析。符合条件后可申请链上登记；任何人的资格可能因数据不完整而无法确认。</p></div>
     <div class="enrollment" id="enrollment">
       <div>
         <strong>GitHub 资格与钱包登记</strong>
-        <p id="enrollment-hint">正在检查测试网配置…</p>
+        <p id="enrollment-hint">正在检查主网签发服务…</p>
       </div>
-      <button id="enroll" class="secondary" type="button" disabled>连接钱包（测试网）</button>
+      <button id="enroll" class="secondary" type="button" disabled>连接钱包并登记（主网）</button>
     </div>
+    <label class="fineprint"><input type="checkbox" id="consent"> 我理解 GitHub ID 与钱包地址会被永久公开关联、不可删除或迁移，并愿意用自己的 ETH 支付主网 Gas。</label>
     <p id="enrollment-result" class="fineprint" role="status" aria-live="polite"></p>
   </section>
   <dialog id="refresh-dialog" class="refresh-dialog" aria-labelledby="refresh-dialog-title">
@@ -66,11 +67,11 @@
     <div class="section-title"><span>01 — DESIGN</span><h2>简单规则，长期实验。</h2></div>
     <div class="three">
       <article><span class="number">01</span><h3>Github 履历</h3><p>研究账号年龄、公开项目、Star 和已合并 PR。账户不等于自然人，我们不会声称已经解决女巫问题。</p></article>
-      <article><span class="number">02</span><h3>一次通过，永久有效</h3><p>未来链上资格若通过首次登记，将不要求周期续验，也不设置管理员撤销已登记资格的权力。</p></article>
-      <article><span class="number">03</span><h3>每人份额相同</h3><p>目标是每个合格身份每天累计 1 DC2。项目热度不产生额外份额，合约尚未发行。</p></article>
+      <article><span class="number">02</span><h3>一次通过，永久有效</h3><p>链上资格通过首次登记后不要求周期续验，也不设置管理员撤销已登记资格的权力。</p></article>
+      <article><span class="number">03</span><h3>每人份额相同</h3><p>每个合格且已登记身份每天累计 1 DC2。项目热度不产生额外份额，合约现已部署至 Arbitrum One。</p></article>
     </div>
   </section>
-  <footer><p><strong>DC2 尚未发行。</strong> 这是公开的资格研究预览，没有空投、代币交易、投资回报或现有 DC1 的兑换承诺。</p><p><a href="https://github.com/picasso250/daycoin">GitHub · DayCoin</a><span>© DayCoin Experiment</span></p></footer>
+  <footer><p><strong>DC2 主网合约已部署。</strong> 这是公开的资格研究预览，没有空投、代币交易、投资回报或现有 DC1 的兑换承诺。</p><p><a href="https://github.com/picasso250/daycoin">GitHub · DayCoin</a><span>© DayCoin Experiment</span></p></footer>
 </main>
 </body>
 </html>
