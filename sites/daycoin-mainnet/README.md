@@ -81,3 +81,7 @@ Use the website-local `wrangler.jsonc` with Cloudflare Git integration **Root di
 This is a website/document change only. Do not redeploy DC1, modify deployed protocol rules, or alter deployment journals as part of publishing it. The historical UBIC1 site at https://ubi.io99.xyz/ remains independent.
 
 中文维护说明：英文为根路径默认语言，中文完整保留在 `/zh/`。修改首页请编辑 `content`，修改动态提示请同时更新 `messages.mjs`；白皮书和宣言的中英文 Markdown 需同步审阅。共享交易实现与合约配置，不维护两套钱包逻辑。真实钱包界面由钱包自身决定语言；本地自动化验证不代表独立安全审计，也不替代发布后的真实设备检查。
+
+## DC2 technical preview
+
+The separate zero-framework DC2 preview lives at `/dc2/`. For OAuth configuration and rollout limitations, see [DC2 OAuth setup](../../docs/DC2-OAUTH-SETUP.md). The preview does **not** issue DC2 tokens.

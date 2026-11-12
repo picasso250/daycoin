@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="DayCoin 2 开源开发者资格实验，运行目标网络 Arbitrum One。">
+  <title>DC2 · DayCoin for Open-Source Builders</title>
+  <link rel="stylesheet" href="/dc2/style.css">
+  <script type="module" src="/dc2/client.mjs"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="/">DAYCOIN<span class="submark"> / DC2</span></a>
+  <a class="back" href="/">返回 DC1 ↗</a>
+</header>
+<main>
+  <section class="hero">
+    <div class="overline"><span class="pulse"></span> ARBITRUM ONE · 技术预览</div>
+    <h1>代码有历史。<br><em>贡献有重量。</em></h1>
+    <p class="lead">DayCoin 2 探索一种面向开源建设者的每日发行机制。我们不以钱包里的资产多少判断资格，而从真实、长期的 GitHub 开发记录开始。</p>
+    <div class="cta-row">
+      <a id="login" class="button" href="/api/dc2/login" aria-disabled="true">使用 GitHub 登录 <span>↗</span></a>
+      <button id="logout" class="secondary hidden" type="button">退出登录</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite">正在检查 GitHub 登录服务…</p>
+  </section>
+  <section class="panel hidden" id="account" aria-labelledby="profile-heading">
+    <div class="panel-head">
+      <p class="eyebrow">PUBLIC GITHUB SIGNALS</p>
+      <h2 id="profile-heading">账户预分析</h2>
+      <p id="identity" class="identity"></p>
+    </div>
+    <div class="metric-grid">
+      <div class="metric"><strong id="age">—</strong><span>账户历史（年）</span></div>
+      <div class="metric"><strong id="repos">—</strong><span>公开原创仓库（已观察）</span></div>
+      <div class="metric"><strong id="stars">—</strong><span>仓库 Star 总数（未核实独立性）</span></div>
+      <div class="metric"><strong id="prs">—</strong><span>第三方合并 PR（采样）</span></div>
+    </div>
+    <p id="evidence-notice" class="fineprint"></p>
+    <div class="note"><strong>尚不是正式资格结果</strong><p>正式规则和独立贡献信号的核实方式仍在开发。当前页面不会登记永久资格，也不会发行 DC2。</p></div>
+  </section>
+  <section class="principles">
+    <div class="section-title"><span>01 — DESIGN</span><h2>简单规则，长期实验。</h2></div>
+    <div class="three">
+      <article><span class="number">01</span><h3>Github 履历</h3><p>研究账号年龄、公开项目、Star 和已合并 PR。账户不等于自然人，我们不会声称已经解决女巫问题。</p></article>
+      <article><span class="number">02</span><h3>一次通过，永久有效</h3><p>未来链上资格若通过首次登记，将不要求周期续验，也不设置管理员撤销已登记资格的权力。</p></article>
+      <article><span class="number">03</span><h3>每人份额相同</h3><p>目标是每个合格身份每天累计 1 DC2。项目热度不产生额外份额，合约尚未发行。</p></article>
+    </div>
+  </section>
+  <footer><p><strong>DC2 尚未发行。</strong> 这是公开的资格研究预览，没有空投、代币交易、投资回报或现有 DC1 的兑换承诺。</p><p><a href="https://github.com/picasso250/daycoin">GitHub · DayCoin</a><span>© DayCoin Experiment</span></p></footer>
+</main>
+</body>
+</html>

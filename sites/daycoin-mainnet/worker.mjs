@@ -1,3 +1,4 @@
+import { handleDc2 } from './dc2-auth.mjs';
 // Anonymous, per-tab journey events. No account addresses, amounts, IPs or cookies.
 const EVENTS = new Set([
   'page_view', 'protocol_view', 'connect_click', 'wallet_select', 'connect_success',
@@ -12,6 +13,7 @@ const json = (message, status) => new Response(message, { status, headers: { 'Ca
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/dc2/')) return handleDc2(request, env);
     if (url.pathname !== '/api/journey') return env.ASSETS.fetch(request);
     if (request.method !== 'POST') return json('Method not allowed', 405);
     // Prevent cross-site websites from causing analytics writes.
