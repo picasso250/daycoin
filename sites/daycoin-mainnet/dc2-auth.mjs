@@ -4,6 +4,7 @@ const PREFIX = '/api/dc2/';
 const STATE = '__Host-dc2_oauth';
 const SESSION = '__Host-dc2_session';
 const DAY = 86400;
+const REFRESH_COOLDOWN = 300;
 const encoder = new TextEncoder();
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
@@ -117,32 +118,11 @@ export async function handleDc2(request, env, { fetcher = fetch, now = () => Mat
   if (path === 'config' && request.method === 'GET') return json({ loginReady: ready, network: 'Arbitrum One', preview: true });
   if (path === 'me' && request.method === 'GET') {
     const session = await decodeSession(readCookie(request, SESSION), env.DC2_SESSION_SECRET, now());
-    if (!session) return json({ authenticated: false });
-    // Existing 24-hour sessions predate the Followers field. Backfill from the
-    // public user endpoint once, verifying stable numeric ID before trusting it.
-    // Missing data stays explicitly unknown when GitHub is unavailable.
-    let evidence = session.evidence;
-    let updated = false;
-    if (evidence && (evidence.followersObserved === undefined || evidence.followersObserved === null)) {
-      try {
-        const response = await fetcher('https://api.github.com/users/' + encodeURIComponent(session.login), {
-          headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'DayCoin-DC2-Preview' }
-        });
-        if (response.ok) {
-          const user = await response.json();
-          if (user.id === session.uid && Number.isSafeInteger(user.followers) && user.followers >= 0) {
-            evidence = { ...evidence, followersObserved: user.followers };
-            updated = true;
-          }
-        }
-      } catch { /* Old session remains valid; no fabricated follower number. */ }
-    }
-    const result = json({ authenticated: true, user: { id: session.uid, login: session.login }, evidence });
-    if (updated) {
-      const signed = await encodeSession({ ...session, evidence }, env.DC2_SESSION_SECRET);
-      result.headers.append('Set-Cookie', cookie(SESSION, signed, Math.max(0, session.exp - now())));
-    }
-    return result;
+    return json(session ? {
+      authenticated: true, user: { id: session.uid, login: session.login },
+      evidence: session.evidence, checkedAt: session.checkedAt ?? null,
+      refreshAfter: session.checkedAt ? session.checkedAt + REFRESH_COOLDOWN : now()
+    } : { authenticated: false });
   }
   if (path === 'logout' && request.method === 'POST') {
     if (request.headers.get('Origin') !== publicOrigin) return json({ error: 'Forbidden' }, 403);
@@ -152,6 +132,15 @@ export async function handleDc2(request, env, { fetcher = fetch, now = () => Mat
   }
   if (path === 'login' && request.method === 'GET') {
     if (!ready) return json({ error: 'GitHub OAuth is not configured yet' }, 503);
+    if (url.searchParams.get('refresh') === '1') {
+      const session = await decodeSession(readCookie(request, SESSION), env.DC2_SESSION_SECRET, now());
+      if (session && Number.isSafeInteger(session.checkedAt) &&
+          now() < session.checkedAt + REFRESH_COOLDOWN) {
+        return new Response(null, {
+          status: 303, headers: { Location: '/dc2/?error=refresh_too_soon', 'Cache-Control': 'no-store' }
+        });
+      }
+    }
     const state = random();
     const callback = publicOrigin + '/api/dc2/callback';
     const target = new URL('https://github.com/login/oauth/authorize');
@@ -204,7 +193,7 @@ export async function handleDc2(request, env, { fetcher = fetch, now = () => Mat
       const evidence = await publicEvidence(fetcher, user, tokenBody.access_token, now());
       // Only public profile data is serialized, GitHub access token is discarded.
       const session = await encodeSession({
-        uid: user.id, login: user.login, exp: now() + DAY, evidence
+        uid: user.id, login: user.login, exp: now() + DAY, checkedAt: now(), evidence
       }, env.DC2_SESSION_SECRET);
       const res = finish(null);
       res.headers.append('Set-Cookie', cookie(SESSION, session, DAY));

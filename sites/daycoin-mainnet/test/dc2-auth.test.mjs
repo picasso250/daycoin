@@ -113,50 +113,30 @@ test('unknown origin and routes are rejected', async () => {
   assert.equal(n.status, 404);
 });
 
-test('old signed session automatically backfills followers from verified public GitHub profile', async () => {
+test('manual refresh reauthorizes after cooldown and updates checkedAt', async () => {
   const start = await call('/api/dc2/login');
   const state = new URL(start.headers.get('Location')).searchParams.get('state');
-  const stateCookie = cookieValue(start, '__Host-dc2_oauth');
-  // Simulate a historical OAuth callback with GitHub API returning an older
-  // profile shape where followers was omitted.
-  const oldFetch = async (url, opts) => {
-    if (new URL(url).pathname === '/user') {
-      return Response.json({ id: 4242, login: 'sample-dev', created_at: '2020-01-01T00:00:00Z' });
-    }
-    return fixture(url);
-  };
-  const cb = await call('/api/dc2/callback?code=verified&state=' + state,
-    { headers: { Cookie: stateCookie } }, env, { fetcher: oldFetch });
-  const oldSession = cookieValue(cb, '__Host-dc2_session');
-  assert.ok(oldSession);
-  const backfillFetch = async url => {
-    assert.equal(url, 'https://api.github.com/users/sample-dev');
-    return Response.json({ id: 4242, followers: 63 });
-  };
-  const me = await call('/api/dc2/me', { headers: { Cookie: oldSession } }, env, { fetcher: backfillFetch });
-  assert.equal((await me.json()).evidence.followersObserved, 63);
-  const refreshedSession = cookieValue(me, '__Host-dc2_session');
-  assert.ok(refreshedSession);
-  const repeat = await call('/api/dc2/me', { headers: { Cookie: refreshedSession } }, env, {
-    fetcher: () => { throw new Error('No repeated requests expected'); }
-  });
-  assert.equal((await repeat.json()).evidence.followersObserved, 63);
-  assert.equal(repeat.headers.getSetCookie().length, 0);
+  const callback = await call('/api/dc2/callback?code=ok&state=' + state,
+    { headers: { Cookie: cookieValue(start, '__Host-dc2_oauth') } }, env,
+    { fetcher: fixture });
+  const session = cookieValue(callback, '__Host-dc2_session');
+  const me = await call('/api/dc2/me', { headers: { Cookie: session } });
+  const data = await me.json();
+  assert.equal(data.checkedAt, now());
+  assert.equal(data.refreshAfter, now() + 300);
+
+  const tooSoon = await call('/api/dc2/login?refresh=1', { headers: { Cookie: session } });
+  assert.equal(tooSoon.status, 303);
+  assert.equal(tooSoon.headers.get('Location'), '/dc2/?error=refresh_too_soon');
+
+  const allowed = await call('/api/dc2/login?refresh=1',
+    { headers: { Cookie: session } }, env, { now: () => now() + 301 });
+  assert.equal(allowed.status, 302);
+  assert.match(allowed.headers.get('Location'), /^https:\/\/github.com\/login\/oauth\/authorize/);
 });
 
-test('backfill rejects unrelated GitHub account IDs', async () => {
-  const start = await call('/api/dc2/login');
-  const state = new URL(start.headers.get('Location')).searchParams.get('state');
-  const cb = await call('/api/dc2/callback?code=verified&state=' + state,
-    { headers: { Cookie: cookieValue(start, '__Host-dc2_oauth') } }, env, {
-      fetcher: async url => new URL(url).pathname === '/user'
-        ? Response.json({ id: 4242, login: 'sample-dev', created_at: '2020-01-01T00:00:00Z' })
-        : fixture(url)
-    });
-  const oldSession = cookieValue(cb, '__Host-dc2_session');
-  const me = await call('/api/dc2/me', { headers: { Cookie: oldSession } }, env, {
-    fetcher: async () => Response.json({ id: 999999, followers: 100 })
-  });
-  assert.equal((await me.json()).evidence.followersObserved, null);
-  assert.equal(me.headers.getSetCookie().length, 0);
+test('manual refresh without an authenticated session follows normal OAuth login', async () => {
+  const response = await call('/api/dc2/login?refresh=1');
+  assert.equal(response.status, 302);
+  assert.ok(cookieValue(response, '__Host-dc2_oauth'));
 });
