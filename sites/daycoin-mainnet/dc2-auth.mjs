@@ -117,7 +117,32 @@ export async function handleDc2(request, env, { fetcher = fetch, now = () => Mat
   if (path === 'config' && request.method === 'GET') return json({ loginReady: ready, network: 'Arbitrum One', preview: true });
   if (path === 'me' && request.method === 'GET') {
     const session = await decodeSession(readCookie(request, SESSION), env.DC2_SESSION_SECRET, now());
-    return json(session ? { authenticated: true, user: { id: session.uid, login: session.login }, evidence: session.evidence } : { authenticated: false });
+    if (!session) return json({ authenticated: false });
+    // Existing 24-hour sessions predate the Followers field. Backfill from the
+    // public user endpoint once, verifying stable numeric ID before trusting it.
+    // Missing data stays explicitly unknown when GitHub is unavailable.
+    let evidence = session.evidence;
+    let updated = false;
+    if (evidence && (evidence.followersObserved === undefined || evidence.followersObserved === null)) {
+      try {
+        const response = await fetcher('https://api.github.com/users/' + encodeURIComponent(session.login), {
+          headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'DayCoin-DC2-Preview' }
+        });
+        if (response.ok) {
+          const user = await response.json();
+          if (user.id === session.uid && Number.isSafeInteger(user.followers) && user.followers >= 0) {
+            evidence = { ...evidence, followersObserved: user.followers };
+            updated = true;
+          }
+        }
+      } catch { /* Old session remains valid; no fabricated follower number. */ }
+    }
+    const result = json({ authenticated: true, user: { id: session.uid, login: session.login }, evidence });
+    if (updated) {
+      const signed = await encodeSession({ ...session, evidence }, env.DC2_SESSION_SECRET);
+      result.headers.append('Set-Cookie', cookie(SESSION, signed, Math.max(0, session.exp - now())));
+    }
+    return result;
   }
   if (path === 'logout' && request.method === 'POST') {
     if (request.headers.get('Origin') !== publicOrigin) return json({ error: 'Forbidden' }, 403);
