@@ -11,6 +11,7 @@ let refreshAfter = 0;
 let loginReady = false;
 let authenticated = false;
 let issuanceConfig = null;
+let eligible = false;
 const say = msg => { status.textContent = msg; show(status, Boolean(msg)); };
 const show = (el, yes) => el.classList.toggle('hidden', !yes);
 const format = value => typeof value === 'number' ? value.toLocaleString('zh-CN') : '暂无数据';
@@ -41,6 +42,7 @@ async function refresh() {
     loginReady = config.loginReady;
     issuanceConfig = config.issuance || null;
     authenticated = Boolean(me.authenticated);
+    eligible = false;
     login.setAttribute('aria-disabled', config.loginReady ? 'false' : 'true');
     if (config.loginReady) login.setAttribute('href', '/api/dc2/login');
     else login.removeAttribute('href');
@@ -49,6 +51,24 @@ async function refresh() {
     show(account, Boolean(me.authenticated));
     if (me.authenticated) {
       const { user, evidence } = me;
+      const checks = me.eligibility?.checks || {};
+      const verified = key => checks[key] === true;
+      const confirmed = (id, key, unknown) => {
+        const node = $(id);
+        const state = verified(key) ? 'pass' : unknown ? 'unknown' : 'fail';
+        node.dataset.state = state;
+        node.textContent = state === 'pass' ? '✓ 已达标' : state === 'unknown' ? '？数据不足' : '× 未达标';
+      };
+      confirmed('check-age', 'age', !evidence.createdAt);
+      confirmed('check-stars', 'stars', !Number.isSafeInteger(evidence.rawStarsObserved));
+      confirmed('check-prs', 'prs', !Number.isSafeInteger(evidence.externalMergedPRsObserved));
+      confirmed('check-followers', 'followers', !Number.isSafeInteger(evidence.followersObserved));
+      eligible = me.eligibility?.eligible === true && ['age','stars','prs','followers'].every(verified);
+      $('qualification-summary').textContent = eligible ? '✓ 符合登记门槛' : '暂不符合登记条件';
+      $('qualification-summary').dataset.eligible = String(eligible);
+      $('qualification-explanation').textContent = eligible
+        ? '四项观测数据均达到签发门槛。请确认永久公开绑定的风险，再连接专用钱包登记。'
+        : '未达标或数据不足，暂不能登记，也不会发生链上 Gas 支出。若资料已更新，可使用上方刷新按钮重新检查（最短间隔 5 分钟）。';
       $('identity').textContent = `@${user.login} · GitHub ID ${user.id}`;
       $('age').textContent = Number.isFinite(evidence.daysOld) ? (evidence.daysOld / 365.25).toFixed(1) : '—';
       $('repos').textContent = format(evidence.publicNonForkReposObserved);
@@ -65,8 +85,8 @@ async function refresh() {
         ? '上次检查：' + new Date(checkedAt * 1000).toLocaleString('zh-CN')
         : '上次检查：登录时';
       refreshAfter = Number.isSafeInteger(me.refreshAfter) ? me.refreshAfter : 0;
-      $('enroll').disabled = !issuanceConfig?.enabled || !$('consent').checked;
-      $('enrollment-hint').textContent = issuanceConfig?.enabled ? 'Arbitrum One 主网登记。GitHub ID 与钱包地址将永久公开绑定，不能撤销。请使用专用钱包。' : 'DC2 合约已部署；目前资格签发暂未开启。';
+      $('enroll').disabled = !issuanceConfig?.enabled || !eligible || !$('consent').checked;
+      $('enrollment-hint').textContent = !issuanceConfig?.enabled ? '资格签发服务暂未开启。' : !eligible ? '当前 GitHub 资料未满足全部资格门槛，无法申请登记。' : 'Arbitrum One 主网登记。GitHub ID 与钱包地址将永久公开绑定，不能撤销。请使用专用钱包。';
       if (!error) say('');
     } else if (!error) {
       say(config.loginReady ? '登录 GitHub 后可查看账户公开贡献的初步分析。' : 'GitHub 登录尚未配置，公开预览已开放。');
@@ -76,7 +96,7 @@ async function refresh() {
     say('目前无法连接登录服务，请稍后再试。');
   }
 }
-$('consent').addEventListener('change', () => { $('enroll').disabled = !issuanceConfig?.enabled || !$('consent').checked; });
+$('consent').addEventListener('change', () => { $('enroll').disabled = !issuanceConfig?.enabled || !eligible || !$('consent').checked; });
 $('enroll').addEventListener('click', async () => {
   const button = $('enroll');
   button.disabled = true;

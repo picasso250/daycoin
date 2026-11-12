@@ -18,9 +18,10 @@ async function pageFor(authenticated, refreshAfter = 0) {
   await page.route('**/api/dc2/me', route => route.fulfill({ json: authenticated
     ? { authenticated: true, user: { id: 123, login: 'tester' },
         checkedAt: 1794480000, refreshAfter,
+        eligibility: { eligible: true, checks: {age:true, stars:true, prs:true, followers:true} },
         evidence: { daysOld: 3500, publicNonForkReposObserved: 8, rawStarsObserved: 34,
           externalMergedPRsObserved: 11, followersObserved: 18,
-          coverage: { reposComplete: true, prsComplete: false } } }
+          createdAt:'2017-01-01T00:00:00Z', coverage: { reposComplete: true, prsComplete: false } } }
     : { authenticated: false } }));
   await page.goto(base + '/dc2/');
   await page.locator('#account:not(.hidden),#hero:not(.hidden)').first().waitFor();
@@ -80,5 +81,40 @@ test('mainnet consent remains required even if issuer is ready', async () => {
   assert.equal(await page.locator('#enroll').isEnabled(), true);
   assert.match(await page.locator('#enrollment-hint').innerText(), /Arbitrum One/);
   assert.deepEqual(errors, []);
+  await context.close();
+});
+
+
+test('insufficient GitHub metrics identify failed criteria and block registration without wallet request', async () => {
+  const {page,context,errors}=await pageFor(true);
+  await page.route('**/api/dc2/config', route => route.fulfill({ json: {loginReady:true,
+    issuance:{ enabled:true,chainId:42161,contract:'0xD891dc80535e885E5893B8139902F90F6aBA086b' }} }));
+  await page.route('**/api/dc2/me', route => route.fulfill({json:{authenticated:true,user:{id:98765,login:'new-dev'},
+    checkedAt:1794480000, refreshAfter:0,
+    eligibility:{eligible:false,checks:{age:false,stars:false,prs:false,followers:true}},
+    evidence:{daysOld:500,createdAt:'2025-01-01T00:00:00Z',publicNonForkReposObserved:2,
+      rawStarsObserved:3,externalMergedPRsObserved:null,followersObserved:11,
+      coverage:{reposComplete:true,prsComplete:false}}
+  }}));
+  await page.reload();
+  assert.match(await page.locator('#qualification-summary').innerText(),/暂不符合/);
+  assert.equal(await page.locator('#check-age').getAttribute('data-state'),'fail');
+  assert.equal(await page.locator('#check-stars').getAttribute('data-state'),'fail');
+  assert.equal(await page.locator('#check-prs').getAttribute('data-state'),'unknown');
+  assert.equal(await page.locator('#check-followers').getAttribute('data-state'),'pass');
+  await page.locator('#consent').check();
+  assert.equal(await page.locator('#enroll').isDisabled(),true);
+  assert.match(await page.locator('#qualification-explanation').innerText(),/不会发生链上 Gas/);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+
+test('contract details and exact thresholds are public before GitHub login', async () => {
+  const {page,context,errors}=await pageFor(false);
+  assert.equal(await page.locator('.contract-reference code').innerText(), '0xD891dc80535e885E5893B8139902F90F6aBA086b');
+  assert.match(await page.locator('.protocol-info').innerText(),/7 年/);
+  assert.match(await page.locator('.protocol-info').innerText(),/10 Star/);
+  assert.match(await page.locator('.protocol-info').innerText(),/Arbitrum One/);
+  assert.deepEqual(errors,[]);
   await context.close();
 });

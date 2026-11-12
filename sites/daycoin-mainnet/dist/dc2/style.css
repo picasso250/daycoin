@@ -27,3 +27,13 @@ main{max-width:1120px;padding:0 28px;margin:auto}.hero{padding:102px 0 100px;max
 .enrollment button:disabled{cursor:not-allowed;opacity:.45}
 #enrollment-result{overflow-wrap:anywhere}
 @media(max-width:740px){.enrollment{align-items:flex-start;flex-direction:column}}
+
+/* Registration criteria and verifiable protocol information. */
+.qualification{margin-top:22px;padding:20px;border:1px solid #365143;border-radius:12px;background:#10231c}
+.qualification-header{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.qualification h3{font-size:16px;margin:0}.qualification-summary{font-size:13px;color:#dca997;font-weight:650}.qualification-summary[data-eligible="true"]{color:#97dfae}
+.qualification-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:15px}
+.qualification-item{border:1px solid #345040;padding:12px;border-radius:8px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:#9fbbab}
+.qualification-item strong{color:#e9f3eb;font-size:19px}.check-result{font-size:12px;font-weight:650}.check-result[data-state="pass"]{color:#9ee9b7}.check-result[data-state="fail"]{color:#f0ab99}.check-result[data-state="unknown"]{color:#ddc98a}
+.qualification>.fineprint{margin-bottom:0}.protocol-info{border-top:1px solid #2b4337;padding:46px 0 40px}.protocol-info p{max-width:900px;line-height:1.85;color:#adc5b8;font-size:14px}.protocol-info strong{color:#ddf3e5}.contract-reference{margin-top:23px;padding:18px;border:1px solid #365143;border-radius:10px;display:flex;flex-direction:column;gap:9px}.contract-reference span{font-size:12px;color:#96b09f}.contract-reference a{display:block;color:#b5edba;overflow-wrap:anywhere;font-size:13px}.contract-reference a:hover{text-decoration:underline}.contract-reference code{font-size:12px}
+@media(max-width:740px){.qualification{padding:14px}.qualification-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.protocol-info{padding:34px 0}.contract-reference code{font-size:11px}}

@@ -1,4 +1,4 @@
-import { handleIssuance, issuerStatus } from './dc2-issuer.mjs';
+import { handleIssuance, issuerStatus, candidateEligibility } from './dc2-issuer.mjs';
 // DC2 OAuth authentication. No GitHub access token persistence; signing is gated separately.
 // GitHub OAuth app credentials and the HMAC session key are Worker secrets.
 const PREFIX = '/api/dc2/';
@@ -126,7 +126,7 @@ export async function handleDc2(request, env, { fetcher = fetch, now = () => Mat
     const session = await decodeSession(readCookie(request, SESSION), env.DC2_SESSION_SECRET, now());
     return json(session ? {
       authenticated: true, user: { id: session.uid, login: session.login },
-      evidence: session.evidence, checkedAt: session.checkedAt ?? null,
+      evidence: session.evidence, eligibility: candidateEligibility(session, now()), checkedAt: session.checkedAt ?? null,
       refreshAfter: session.checkedAt ? session.checkedAt + REFRESH_COOLDOWN : now()
     } : { authenticated: false });
   }

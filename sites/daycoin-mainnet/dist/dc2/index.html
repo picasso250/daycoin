@@ -40,6 +40,16 @@
       <div class="metric"><strong id="prs">—</strong><span>第三方合并 PR（采样）</span></div>
       <div class="metric"><strong id="followers">—</strong><span>Followers（公开数量）</span></div>
     </div>
+    <section class="qualification" aria-labelledby="qualification-heading">
+      <div class="qualification-header"><h3 id="qualification-heading">登记资格 · 四项必须全部达标</h3><span id="qualification-summary" class="qualification-summary" role="status">正在核对…</span></div>
+      <div class="qualification-grid">
+        <div class="qualification-item"><span>GitHub 账户历史</span><strong>≥ 7 年</strong><span id="check-age" class="check-result">待检查</span></div>
+        <div class="qualification-item"><span>自有非 Fork 仓库 Star 总数</span><strong>≥ 10</strong><span id="check-stars" class="check-result">待检查</span></div>
+        <div class="qualification-item"><span>第三方仓库已合并 PR</span><strong>≥ 10</strong><span id="check-prs" class="check-result">待检查</span></div>
+        <div class="qualification-item"><span>GitHub Followers</span><strong>≥ 10</strong><span id="check-followers" class="check-result">待检查</span></div>
+      </div>
+      <p id="qualification-explanation" class="fineprint">只有四项同时达标，才能申请登记。未达标或无法确认时不发送链上交易。</p>
+    </section>
     <p id="evidence-notice" class="fineprint"></p>
     <div class="recheck-row">
       <span id="checked-at" class="fineprint"></span>
@@ -63,6 +73,12 @@
     <p id="refresh-dialog-text"></p>
     <form method="dialog"><button class="secondary" type="submit">知道了</button></form>
   </dialog>
+  <section class="protocol-info" aria-labelledby="protocol-heading">
+    <div class="section-title"><span>ON-CHAIN · ARBITRUM ONE</span><h2 id="protocol-heading">规则公开，合约可验证。</h2></div>
+    <p>GitHub 资格需要同时满足：账户满 <strong>7 年</strong>、自有非 Fork 仓库累计至少 <strong>10 Star</strong>、向第三方仓库提交至少 <strong>10 个已合并 PR</strong>、至少 <strong>10 Followers</strong>。满足条件后自行连接钱包登记并支付 Arbitrum One Gas；资格永久有效，每天累计 1 DC2。</p>
+    <div class="contract-reference"><span>DC2 合约 · Arbitrum One（Chain ID 42161）</span><a href="https://arbiscan.io/address/0xD891dc80535e885E5893B8139902F90F6aBA086b#code" target="_blank" rel="noopener noreferrer"><code>0xD891dc80535e885E5893B8139902F90F6aBA086b</code> ↗</a></div>
+    <p class="fineprint">仅使用 GitHub 公开数据作为资格证据；Star 独立性未验证，PR 和仓库数据可能不完整。资格按当前观测判断，不代表唯一自然人身份。</p>
+  </section>
   <section class="principles">
     <div class="section-title"><span>01 — DESIGN</span><h2>简单规则，长期实验。</h2></div>
     <div class="three">
