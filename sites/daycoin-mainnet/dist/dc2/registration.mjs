@@ -48,6 +48,6 @@ export async function beginMainnetRegistration(config, setStatus) {
   const hash = await wallet.request({ method: 'eth_sendTransaction', params: [{
     from: address, to: config.contract, data, value: '0x0'
   }] });
-  setStatus('主网登记交易已提交：' + hash);
+  setStatus('Arbitrum One 登记交易已提交：' + hash);
   return hash;
 }
