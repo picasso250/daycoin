@@ -15,21 +15,23 @@
   <a class="back" href="/dc1/">访问 DC1 ↗</a>
 </header>
 <main>
-  <section class="hero">
+  <section class="hero" id="hero">
     <div class="overline"><span class="pulse"></span> ARBITRUM ONE · 技术预览</div>
     <h1>代码有历史。<br><em>贡献有重量。</em></h1>
     <p class="lead">DayCoin 2 探索一种面向开源建设者的每日发行机制。我们不以钱包里的资产多少判断资格，而从真实、长期的 GitHub 开发记录开始。</p>
     <div class="cta-row">
       <a id="login" class="button" href="/api/dc2/login" aria-disabled="true">使用 GitHub 登录 <span>↗</span></a>
-      <button id="logout" class="secondary hidden" type="button">退出登录</button>
     </div>
-    <p id="status" class="status" role="status" aria-live="polite">正在检查 GitHub 登录服务…</p>
   </section>
+  <p id="status" class="status hidden" role="status" aria-live="polite"></p>
   <section class="panel hidden" id="account" aria-labelledby="profile-heading">
     <div class="panel-head">
-      <p class="eyebrow">PUBLIC GITHUB SIGNALS</p>
-      <h2 id="profile-heading">账户预分析</h2>
-      <p id="identity" class="identity"></p>
+      <div>
+        <p class="eyebrow">PUBLIC GITHUB SIGNALS</p>
+        <h2 id="profile-heading">账户预分析</h2>
+        <p id="identity" class="identity"></p>
+      </div>
+      <button id="logout" class="quiet-action" type="button">退出登录</button>
     </div>
     <div class="metric-grid">
       <div class="metric"><strong id="age">—</strong><span>账户历史（年）</span></div>
@@ -41,10 +43,17 @@
     <p id="evidence-notice" class="fineprint"></p>
     <div class="recheck-row">
       <span id="checked-at" class="fineprint"></span>
-      <a id="recheck" class="secondary" href="/api/dc2/login?refresh=1" aria-disabled="true">重新检查 GitHub 数据 ↻</a>
+      <button id="recheck" class="refresh-icon" type="button" aria-label="重新检查 GitHub 数据" title="重新检查 GitHub 数据">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14-5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14 5l2-2"/><path d="M20 20v-4h-4"/></svg>
+      </button>
     </div>
     <div class="note"><strong>尚不是正式资格结果</strong><p>正式规则和独立贡献信号的核实方式仍在开发。当前页面不会登记永久资格，也不会发行 DC2。</p></div>
   </section>
+  <dialog id="refresh-dialog" class="refresh-dialog" aria-labelledby="refresh-dialog-title">
+    <div class="dialog-heading" id="refresh-dialog-title">暂时无法重新检查</div>
+    <p id="refresh-dialog-text"></p>
+    <form method="dialog"><button class="secondary" type="submit">知道了</button></form>
+  </dialog>
   <section class="principles">
     <div class="section-title"><span>01 — DESIGN</span><h2>简单规则，长期实验。</h2></div>
     <div class="three">

@@ -4,4 +4,20 @@ main{max-width:1120px;padding:0 28px;margin:auto}.hero{padding:102px 0 100px;max
 @media(max-width:740px){.topbar{height:68px;padding:0 20px}main{padding:0 20px}.hero{padding:74px 0 72px}.lead{font-size:16px}.three{grid-template-columns:1fr;gap:25px}.metric-grid{grid-template-columns:repeat(2,1fr)}.panel{padding:20px}.hero h1{letter-spacing:-.055em}.principles{padding:45px 0 60px}}
 @media(prefers-reduced-motion:no-preference){a,button{transition:background .15s,color .15s,opacity .15s}}
 
-.recheck-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:18px 0 0}.recheck-row .fineprint{margin:0}.recheck-row .secondary{padding:10px 16px}.recheck-row a[aria-disabled="true"]{pointer-events:none;opacity:.5}
+.recheck-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:18px 0 0}.recheck-row .fineprint{margin:0}
+
+/* Once authenticated, the account panel becomes the first screen. */
+.panel{margin-top:16px}.panel-head{display:flex;align-items:start;justify-content:space-between;gap:20px}
+.panel-head .eyebrow{margin-top:0}.quiet-action{background:none;border:0;color:#839e90;font-size:12px;cursor:pointer;padding:6px 0}
+.quiet-action:hover{color:#e6f0e9}.status{margin:0 0 16px}.status.hidden{display:none}
+.recheck-row{display:flex;align-items:center;justify-content:flex-start;gap:8px;flex-wrap:wrap;margin:18px 0 0}
+.recheck-row .fineprint{margin:0}.refresh-icon{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid transparent;border-radius:8px;color:#9ab6a8;cursor:pointer;padding:6px}
+.refresh-icon svg{width:17px;height:17px}.refresh-icon:hover{color:#d3f6df;background:#1a3026;border-color:#375245}
+.refresh-icon:focus-visible{outline:2px solid #b5edba}.refresh-icon.loading svg{animation:dc2-spin .7s linear infinite}
+@keyframes dc2-spin{to{transform:rotate(360deg)}}
+.refresh-dialog{max-width:min(380px,calc(100vw - 36px));background:#12251d;border:1px solid #456752;border-radius:14px;color:#e9f1e9;padding:25px;box-shadow:0 24px 80px #0009}
+.refresh-dialog::backdrop{background:#0009}.dialog-heading{font-size:19px;font-weight:650}
+.refresh-dialog p{font-size:14px;color:#a6c0ae;line-height:1.7}.refresh-dialog form{display:flex;justify-content:flex-end;margin-top:20px}
+.refresh-dialog .secondary{padding:9px 17px}
+@media(max-width:740px){.panel{margin-top:12px}.recheck-row{gap:3px}}
+@media(prefers-reduced-motion:reduce){.refresh-icon.loading svg{animation:none}}

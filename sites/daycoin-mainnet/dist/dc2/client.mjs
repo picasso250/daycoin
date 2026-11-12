@@ -3,7 +3,13 @@ const status = $('status');
 const login = $('login');
 const logout = $('logout');
 const account = $('account');
-const say = msg => { status.textContent = msg; };
+const hero = $('hero');
+const recheck = $('recheck');
+const refreshDialog = $('refresh-dialog');
+let refreshAfter = 0;
+let loginReady = false;
+let authenticated = false;
+const say = msg => { status.textContent = msg; show(status, Boolean(msg)); };
 const show = (el, yes) => el.classList.toggle('hidden', !yes);
 const format = value => typeof value === 'number' ? value.toLocaleString('zh-CN') : '暂无数据';
 
@@ -30,11 +36,13 @@ async function refresh() {
     if (!configRes.ok || !meRes.ok) throw new Error('Service unavailable');
     const config = await configRes.json();
     const me = await meRes.json();
+    loginReady = config.loginReady;
+    authenticated = Boolean(me.authenticated);
     login.setAttribute('aria-disabled', config.loginReady ? 'false' : 'true');
     if (config.loginReady) login.setAttribute('href', '/api/dc2/login');
     else login.removeAttribute('href');
     show(login, !me.authenticated);
-    show(logout, Boolean(me.authenticated));
+    show(hero, !me.authenticated);
     show(account, Boolean(me.authenticated));
     if (me.authenticated) {
       const { user, evidence } = me;
@@ -53,21 +61,8 @@ async function refresh() {
       $('checked-at').textContent = checkedAt
         ? '上次检查：' + new Date(checkedAt * 1000).toLocaleString('zh-CN')
         : '上次检查：登录时';
-      const recheck = $('recheck');
-      const refreshAfter = Number.isSafeInteger(me.refreshAfter) ? me.refreshAfter : 0;
-      const updateRecheck = () => {
-        const remaining = Math.max(0, refreshAfter * 1000 - Date.now());
-        recheck.setAttribute('aria-disabled', config.loginReady && remaining === 0 ? 'false' : 'true');
-        recheck.title = remaining ? '请等待约 ' + Math.ceil(remaining / 60000) + ' 分钟再检查' : '';
-        recheck.textContent = remaining ? '约 ' + Math.ceil(remaining / 60000) + ' 分钟后可重新检查' : '重新检查 GitHub 数据 ↻';
-        if (remaining || !config.loginReady) recheck.removeAttribute('href');
-        else recheck.setAttribute('href', '/api/dc2/login?refresh=1');
-      };
-      updateRecheck();
-      if (refreshAfter * 1000 > Date.now()) {
-        window.setTimeout(updateRecheck, Math.max(1, refreshAfter * 1000 - Date.now()) + 100);
-      }
-      if (!error) say('GitHub 数据已更新。这是初步观察，不代表 DC2 永久资格。');
+      refreshAfter = Number.isSafeInteger(me.refreshAfter) ? me.refreshAfter : 0;
+      if (!error) say('');
     } else if (!error) {
       say(config.loginReady ? '登录 GitHub 后可查看账户公开贡献的初步分析。' : 'GitHub 登录尚未配置，公开预览已开放。');
     }
@@ -76,6 +71,22 @@ async function refresh() {
     say('目前无法连接登录服务，请稍后再试。');
   }
 }
+recheck.addEventListener('click', () => {
+  if (!authenticated || !loginReady) return;
+  const seconds = Math.max(0, refreshAfter - Math.floor(Date.now() / 1000));
+  if (seconds > 0) {
+    const minutes = Math.ceil(seconds / 60);
+    $('refresh-dialog-title').textContent = '请稍后再检查';
+    $('refresh-dialog-text').textContent = '距离下次检查还需约 ' + minutes + ' 分钟。';
+    refreshDialog.showModal();
+    return;
+  }
+  recheck.disabled = true;
+  recheck.classList.add('loading');
+  recheck.setAttribute('aria-label', '正在重新检查 GitHub 数据');
+  recheck.title = '正在检查…';
+  window.location.assign('/api/dc2/login?refresh=1');
+});
 logout.addEventListener('click', async () => {
   logout.disabled = true;
   try {
