@@ -97,3 +97,8 @@ The root `/` redirects to `/dc2/`. The existing Ethereum DC1 wallet remains at `
 `GET /api/dc2/stats` reads `Registered` logs from deployment block **523527970** and the DC2 ERC-20 `totalSupply()` **at the same block**. Every registration earns 1 DC2 per 86,400 seconds; the global accrued total is the sum of individually rounded positions. Unclaimed = accrued − minted `totalSupply`, not circulating wallet balances. The response is cached for ~60 seconds, and the page refreshes on that interval.
 
 **Scalability boundary:** This first implementation scans the chain's registration log history on cache misses. It fails closed after 2,000 events or on RPC errors, rather than showing a false total. As participation grows, replace this scan with a verified, incrementally indexed event cursor (e.g. D1). The summary is a block snapshot, not a financial guarantee.
+
+
+### DC2 post-enrollment wallet access
+
+GitHub OAuth is solely an **initial eligibility/registration** gate. Registered DC2 wallets can open `/dc2/` on a fresh browser, connect their Arbitrum One wallet, view accrual/balance, and Claim without any GitHub cookie or OAuth response. The page places the read-only wallet dashboard outside the authenticated qualification panel and refreshes it automatically every 30 seconds, regardless of GitHub session. Wallet changes invalidate in-flight reads so stale results cannot overwrite a new account. Losing the registered wallet's private key remains irreversible under the deployed immutable contract.

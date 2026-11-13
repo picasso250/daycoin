@@ -294,3 +294,126 @@ test('public protocol statistics show without GitHub login or wallet', async () 
   assert.equal(await page.locator('#account').isVisible(),false);
   assert.deepEqual(errors,[]);await context.close();
 });
+
+// Post-registration operation MUST never require a GitHub cookie or OAuth service.
+test('registered wallet without GitHub login sees its position and can Claim', async () => {
+  const context = await browser.newContext({viewport:{width:390,height:844}});
+  const page = await context.newPage();
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{
+    const address='0x5E81BF553E9Ab75872a47bAd30A0fd3589AD215E';
+    const word=n=>BigInt(n).toString(16).padStart(64,'0');
+    window.__transactions=[];
+    window.ethereum={request:async({method,params})=>{
+      if(method==='eth_accounts'||method==='eth_requestAccounts')return [address];
+      if(method==='eth_chainId')return '0xa4b1';
+      if(method==='eth_call'){
+        const sel=params[0].data.slice(0,10);
+        if(sel==='0x61b5cb4b')return '0x'+word(1884104);
+        if(sel==='0x99fbab88')return '0x'+word(address)+word(1794480351)+word(0);
+        if(sel==='0x70a08231')return '0x'+word(0);
+      }
+      if(method==='eth_getBlockByNumber')return {timestamp:'0x'+(1794480351+86400).toString(16)};
+      if(method==='eth_sendTransaction'){window.__transactions.push(params[0]);return '0x'+'be'.repeat(32)}
+      if(method==='eth_getTransactionReceipt')return {status:'0x1'};
+      throw Error('Unexpected '+method);
+    }};
+  });
+  await page.route('**/api/dc2/config',route=>route.fulfill({json:{loginReady:true}}));
+  await page.route('**/api/dc2/me',route=>route.fulfill({json:{authenticated:false}}));
+  await page.goto(base+'/dc2/');
+  await page.locator('#wallet-area:not(.hidden)').waitFor();
+  assert.equal(await page.locator('#hero').isVisible(),false);
+  assert.equal(await page.locator('#account').isVisible(),false);
+  assert.equal(await page.locator('#wallet-balance').innerText(),'0');
+  assert.equal(await page.locator('#wallet-pending').innerText(),'1');
+  assert.equal(await page.locator('#claim').isEnabled(),true);
+  assert.match(await page.locator('#wallet-connect-status').innerText(),/无需 GitHub 登录/);
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('#claim').click();
+  await page.locator('#wallet-result').filter({hasText:'已在 Arbitrum One 确认'}).waitFor();
+  const sent=await page.evaluate(()=>window.__transactions);
+  assert.equal(sent.length,1);
+  assert.equal(sent[0].data,'0x4e71d92d');
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+
+test('wallet works even if GitHub session API is unavailable', async()=>{
+  const context=await browser.newContext();const page=await context.newPage();
+  await page.addInitScript(()=>{
+    const address='0x5E81BF553E9Ab75872a47bAd30A0fd3589AD215E';
+    const word=n=>BigInt(n).toString(16).padStart(64,'0');
+    window.ethereum={request:async({method,params})=>{
+      if(method==='eth_accounts')return [address];
+      if(method==='eth_chainId')return '0xa4b1';
+      if(method==='eth_call'){
+        const sel=params[0].data.slice(0,10);
+        if(sel==='0x61b5cb4b')return '0x'+word(1884104);
+        if(sel==='0x99fbab88')return '0x'+word(address)+word(1794480351)+word(0);
+        if(sel==='0x70a08231')return '0x'+word(0);
+      }
+      if(method==='eth_getBlockByNumber')return {timestamp:'0x'+(1794480351+86400).toString(16)};
+      throw Error(method);
+    }};
+  });
+  await page.route('**/api/dc2/config',route=>route.fulfill({status:503,body:'outage'}));
+  await page.route('**/api/dc2/me',route=>route.fulfill({status:503,body:'outage'}));
+  await page.goto(base+'/dc2/');
+  await page.locator('#wallet-area:not(.hidden)').waitFor();
+  assert.equal(await page.locator('#claim').isEnabled(),true);
+  assert.equal(await page.locator('#account').isVisible(),false);
+  await context.close();
+});
+
+test('fresh browser with unregistered wallet shows public landing, never invents a position',async()=>{
+  const context=await browser.newContext();const page=await context.newPage();
+  await page.addInitScript(()=>{
+    window.ethereum={request:async({method})=>{
+      if(method==='eth_accounts')return ['0x5E81BF553E9Ab75872a47bAd30A0fd3589AD215E'];
+      if(method==='eth_chainId')return '0xa4b1';
+      if(method==='eth_call')return '0x'+(0n).toString(16).padStart(64,'0');
+      throw Error(method);
+    }};
+  });
+  await page.route('**/api/dc2/config',route=>route.fulfill({json:{loginReady:true}}));
+  await page.route('**/api/dc2/me',route=>route.fulfill({json:{authenticated:false}}));
+  await page.goto(base+'/dc2/');
+  await page.locator('#wallet-connect-status').filter({hasText:'尚未登记'}).waitFor();
+  assert.equal(await page.locator('#hero').isVisible(),true);
+  assert.equal(await page.locator('#wallet-area').isVisible(),false);
+  await context.close();
+});
+
+test('account switch hides previous wallet data and only shows current chain identity',async()=>{
+  const context=await browser.newContext();const page=await context.newPage();
+  await page.addInitScript(()=>{
+    const a='0x5E81BF553E9Ab75872a47bAd30A0fd3589AD215E';
+    const b='0x1111111111111111111111111111111111111111';
+    const word=n=>BigInt(n).toString(16).padStart(64,'0');
+    let current=a;const listeners={};
+    window.__switchWallet=()=>{current=b;for(const cb of listeners.accountsChanged||[])cb([b]);};
+    window.ethereum={on:(name,cb)=>{(listeners[name]??=[]).push(cb);},request:async({method,params})=>{
+      if(method==='eth_accounts'||method==='eth_requestAccounts')return [current];
+      if(method==='eth_chainId')return '0xa4b1';
+      if(method==='eth_call'){
+        if(params[0].data.startsWith('0x61b5cb4b'))return '0x'+word(current===a?1884104:0);
+        if(params[0].data.startsWith('0x99fbab88'))return '0x'+word(a)+word(1794480351)+word(0);
+        if(params[0].data.startsWith('0x70a08231'))return '0x'+word(0);
+      }
+      if(method==='eth_getBlockByNumber')return {timestamp:'0x'+(1794480351+86400).toString(16)};
+      throw Error(method);
+    }};
+  });
+  await page.route('**/api/dc2/config',route=>route.fulfill({json:{loginReady:true}}));
+  await page.route('**/api/dc2/me',route=>route.fulfill({json:{authenticated:false}}));
+  await page.goto(base+'/dc2/');
+  await page.locator('#wallet-area:not(.hidden)').waitFor();
+  assert.match(await page.locator('#wallet-identity').innerText(),/1884104/);
+  await page.evaluate(()=>window.__switchWallet());
+  await page.locator('#wallet-connect-status').filter({hasText:'尚未登记'}).waitFor();
+  assert.equal(await page.locator('#wallet-area').isVisible(),false);
+  assert.equal(await page.locator('#hero').isVisible(),true);
+  assert.equal(await page.locator('#claim').isVisible(),false);
+  await context.close();
+});

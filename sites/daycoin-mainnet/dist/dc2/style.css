@@ -66,3 +66,10 @@ main{max-width:1120px;padding:0 28px;margin:auto}.hero{padding:102px 0 100px;max
 .stats-grid small{font-size:11px;color:#83a291;line-height:1.55}.public-stats>.fineprint{margin-top:17px}
 @media(max-width:840px){.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.stats-grid article{padding:13px}.stats-grid strong{font-size:23px}}
+
+/* Wallet panel is a peer of the GitHub qualification panel. */
+#wallet-area{margin-bottom:12px}
+#wallet-area .wallet-dashboard{margin:0}
+.wallet-connect-holder{margin:12px 0 52px}
+.wallet-connect-holder.wallet-connected{margin:0 0 75px}
+.wallet-connect-holder .wallet-connect-row{margin:0}

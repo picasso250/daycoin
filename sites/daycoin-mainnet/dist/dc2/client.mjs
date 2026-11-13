@@ -1,5 +1,5 @@
 import { beginMainnetRegistration } from './registration.mjs';
-import { connectWallet, readPosition, sendClaim, waitForReceipt, accrued, formatDC2, DC2_CONTRACT } from './wallet.mjs';
+import { connectWallet, readPosition, sendClaim, waitForReceipt, accrued, formatDC2 } from './wallet.mjs';
 const $ = id => document.getElementById(id);
 const status = $('status');
 const login = $('login');
@@ -24,15 +24,14 @@ const walletStatus = msg => { $('wallet-connect-status').textContent = msg; };
 const walletResult = msg => { $('wallet-result').textContent = msg; };
 const walletButton = $('wallet-connect');
 const claimButton = $('claim');
-const profileParts = ['.metric-grid','.qualification','#evidence-notice','.recheck-row','.note','#enrollment','#consent'];
+// Wallet presentation is independent of GitHub session. GitHub is only needed
+// for eligibility checks and the FIRST registration voucher.
 const switchPresentation = registered => {
+  show($('wallet-area'), registered);
   show($('wallet-dashboard'), registered);
-  for (const selector of profileParts) {
-    const item = account.querySelector(selector);
-    if (item) show(item, !registered);
-  }
-  $('enrollment-result').classList.toggle('hidden', registered);
-  $('profile-heading').textContent = registered ? '我的 DC2 · 链上持仓' : '账户预分析';
+  show(account, authenticated && !registered);
+  show(hero, !authenticated && !registered);
+  $('wallet-connect-area').classList.toggle('wallet-connected', registered);
   walletButton.textContent = registered ? '切换钱包' : '连接钱包 · 查看 DC2';
 };
 function drawWalletTicker() {
@@ -45,7 +44,7 @@ function drawWalletTicker() {
 async function inspectWallet(prompt = false) {
   const id = ++walletRequestSerial;
   const provider = window.ethereum;
-  if (!provider?.request) { walletStatus('未检测到钱包，请先安装浏览器钱包。'); return; }
+  if (!provider?.request) { walletState=null; positionSnapshot=null; switchPresentation(false); walletStatus('未检测到钱包，请先安装浏览器钱包。'); return; }
   const next = await connectWallet(provider,prompt);
   if (id !== walletRequestSerial) return;
   if (!next) { walletState=null;positionSnapshot=null;switchPresentation(false);walletStatus('请先连接钱包，查看链上登记状态。');return; }
@@ -58,8 +57,13 @@ async function inspectWallet(prompt = false) {
   walletStatus('正在读取 Arbitrum One 链上数据…');
   const position = await readPosition(provider,next.address);
   if (id !== walletRequestSerial) return;
-  if (String(await provider.request({method:'eth_chainId'})).toLowerCase() !== '0xa4b1') {
-    positionSnapshot=null;switchPresentation(false);walletStatus('钱包网络已切换，请重新连接 Arbitrum One。');return;
+  const [chainAfter, accountsAfter] = await Promise.all([
+    provider.request({method:'eth_chainId'}), provider.request({method:'eth_accounts'})
+  ]);
+  if (id !== walletRequestSerial) return;
+  if (String(chainAfter).toLowerCase() !== '0xa4b1' ||
+      String(accountsAfter?.[0] || '').toLowerCase() !== next.address.toLowerCase()) {
+    positionSnapshot=null;switchPresentation(false);walletStatus('钱包账户或网络已变化，请重新连接。');return;
   }
   positionSnapshot=position;
   snapshotLocalTime=Date.now();
@@ -73,12 +77,17 @@ async function inspectWallet(prompt = false) {
   $('wallet-balance').textContent = formatDC2(position.balance);
   $('wallet-since').textContent = '登记时间：'+new Date(Number(position.since)*1000).toLocaleString('zh-CN')+' · 发行速率 1 DC2 / 24 小时';
   $('wallet-explorer').href = 'https://arbiscan.io/address/'+encodeURIComponent(next.address)+'#tokentxns';
-  walletStatus(position.githubId === BigInt(loggedGithubId || 0) ? '已登记，正在累计 DC2。' : '此钱包已登记另一个 GitHub ID；Claim 属于当前钱包。');
+  walletStatus(loggedGithubId && position.githubId !== BigInt(loggedGithubId)
+    ? '当前钱包登记的 GitHub ID 与登录账号不同；Claim 仍属于当前钱包。'
+    : '已登记，正在累计 DC2。无需 GitHub 登录。');
   drawWalletTicker();
 }
 async function updateWallet(prompt = false) {
+  const expectedSerial = walletRequestSerial + 1;
   try { await inspectWallet(prompt); }
   catch(e) {
+    // An obsolete RPC failure must not hide a newer wallet's successful state.
+    if (walletRequestSerial !== expectedSerial) return;
     positionSnapshot=null; claimButton.disabled=true; switchPresentation(false);
     walletStatus('读取钱包失败：'+(e?.message||'未知错误'));
   }
@@ -109,7 +118,7 @@ claimButton.addEventListener('click', async () => {
   }
 });
 setInterval(()=>drawWalletTicker(),1000);
-setInterval(()=>{if(authenticated && walletState?.address && !walletBusy && !pendingTransaction) updateWallet(false);},30000);
+setInterval(()=>{if(walletState?.address && !walletBusy && !pendingTransaction) updateWallet(false);},30000);
 if (window.ethereum?.on) {
   for (const event of ['accountsChanged','chainChanged']) window.ethereum.on(event,()=>{
     ++walletRequestSerial; positionSnapshot=null;switchPresentation(false);
@@ -152,8 +161,7 @@ async function refresh() {
     if (config.loginReady) login.setAttribute('href', '/api/dc2/login');
     else login.removeAttribute('href');
     show(login, !me.authenticated);
-    show(hero, !me.authenticated);
-    show(account, Boolean(me.authenticated));
+    switchPresentation(Boolean(positionSnapshot?.registered));
     if (me.authenticated) {
       const { user, evidence } = me;
       const checks = me.eligibility?.checks || {};
@@ -190,7 +198,6 @@ async function refresh() {
       $('enroll').disabled = !issuanceConfig?.enabled || !eligible || !$('consent').checked;
       $('enrollment-hint').textContent = !issuanceConfig?.enabled ? '资格签发服务暂未开启。' : !eligible ? '当前 GitHub 资料未满足全部资格门槛，无法申请登记。' : 'Arbitrum One 主网登记。GitHub ID 与钱包地址将永久公开绑定，不能撤销。请使用专用钱包。';
       if (!error) say('');
-      await updateWallet(false);
     } else if (!error) {
       say(config.loginReady ? '登录 GitHub 后可查看账户公开贡献的初步分析。' : 'GitHub 登录尚未配置，公开预览已开放。');
     }
@@ -247,4 +254,5 @@ logout.addEventListener('click', async () => {
     logout.disabled = false;
   }
 });
-await refresh();
+// Wallet inspection happens even when OAuth is absent or unavailable.
+await Promise.all([refresh(), updateWallet(false)]);
