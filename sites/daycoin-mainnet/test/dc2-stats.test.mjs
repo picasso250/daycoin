@@ -53,3 +53,22 @@ test('RPC outage returns 503, never a fabricated 0 or stale success',async()=>{
  assert.equal((await response.json()).error,'statistics_unavailable');
  assert.equal((await handleDc2Stats(new Request(req.url,{method:'POST'}))).status,405);
 });
+
+
+test('public API retries using an independent Arbitrum RPC on primary outage',async()=>{
+ const attempted=[];
+ const fetcher=async(url,{body})=>{
+  attempted.push(url);
+  if(url==='https://arb1.arbitrum.io/rpc')return new Response('down',{status:503});
+  assert.equal(url,'https://arbitrum-one.publicnode.com');
+  const req=JSON.parse(body);
+  if(req.method==='eth_getBlockByNumber')return Response.json({jsonrpc:'2.0',id:req.id,result:{number:'0x1f3fa000',timestamp:'0x15204'}});
+  if(req.method==='eth_getLogs')return Response.json({jsonrpc:'2.0',id:req.id,result:[makeLog(1884104,100)]});
+  if(req.method==='eth_call')return Response.json({jsonrpc:'2.0',id:req.id,result:word(RATE)});
+  throw Error('unhandled method');
+ };
+ const response=await handleDc2Stats(new Request('https://daycoin.io99.xyz/api/dc2/stats'),{fetcher});
+ assert.equal(response.status,200);assert.equal((await response.json()).registered,1);
+ assert.ok(attempted.includes('https://arb1.arbitrum.io/rpc'));
+ assert.ok(attempted.includes('https://arbitrum-one.publicnode.com'));
+});

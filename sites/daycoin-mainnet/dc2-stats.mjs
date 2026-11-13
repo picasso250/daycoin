@@ -8,6 +8,7 @@ const PERIOD = 86400n;
 const REGISTERED = id('Registered(uint256,address,uint256)');
 const MAX_REGISTRATIONS = 2000; // explicit fail rather than silently truncate
 const RPC = 'https://arb1.arbitrum.io/rpc';
+const BACKUP_RPC = 'https://arbitrum-one.publicnode.com';
 function hexNum(value) {
   if(typeof value !== 'string' || !/^0x[0-9a-fA-F]+$/.test(value)) throw Error('Invalid RPC quantity');
   return BigInt(value);
@@ -36,10 +37,10 @@ export function summarizeDc2(logs, supplyWei, blockTimestamp, blockNumber) {
     totalSupply:amount(supplyWei),totalAccrued:amount(earned),unclaimed:amount(earned-supplyWei)
   };
 }
-export async function readDc2Stats(fetcher=fetch) {
+export async function readDc2Stats(fetcher=fetch, rpcUrl=RPC) {
   let sequence=0;
   const request=async(method,params=[])=>{
-    const result=await fetcher(RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:++sequence,method,params})});
+    const result=await fetcher(rpcUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:++sequence,method,params})});
     if(!result.ok) throw Error('Arbitrum RPC unavailable');
     const json=await result.json();
     if(json.error || !Object.hasOwn(json,'result')) throw Error('Arbitrum RPC rejected '+method);
@@ -67,7 +68,9 @@ export async function handleDc2Stats(request,{fetcher=fetch, cache=null}={}) {
     if(cached)return cached;
   }
   try {
-    const data=await readDc2Stats(fetcher);
+    let data;
+    try { data=await readDc2Stats(fetcher); }
+    catch { data=await readDc2Stats(fetcher,BACKUP_RPC); }
     const response=apiJson(data);
     if(cache)await cache.put(key,response.clone());
     return response;
