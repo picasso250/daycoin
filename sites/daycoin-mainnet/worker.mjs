@@ -1,4 +1,5 @@
 import { handleDc2 } from './dc2-auth.mjs';
+import { handleDc2Stats } from './dc2-stats.mjs';
 // Anonymous, per-tab journey events. No account addresses, amounts, IPs or cookies.
 const EVENTS = new Set([
   'page_view', 'protocol_view', 'connect_click', 'wallet_select', 'connect_success',
@@ -19,6 +20,7 @@ export default {
         headers: { Location: '/dc2/', 'Cache-Control': 'no-store' }
       });
     }
+    if (url.pathname === '/api/dc2/stats') return handleDc2Stats(request, {cache: caches.default});
     if (url.pathname.startsWith('/api/dc2/')) return handleDc2(request, env);
     if (url.pathname !== '/api/journey') return env.ASSETS.fetch(request);
     if (request.method !== 'POST') return json('Method not allowed', 405);

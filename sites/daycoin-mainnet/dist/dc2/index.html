@@ -8,6 +8,7 @@
   <title>DC2 · DayCoin for Open-Source Builders</title>
   <link rel="stylesheet" href="/dc2/style.css">
   <script type="module" src="/dc2/client.mjs"></script>
+  <script type="module" src="/dc2/stats.mjs"></script>
 </head>
 <body>
 <header class="topbar">
@@ -84,6 +85,16 @@
     <p id="refresh-dialog-text"></p>
     <form method="dialog"><button class="secondary" type="submit">知道了</button></form>
   </dialog>
+  <section class="public-stats" id="statistics" aria-labelledby="statistics-heading">
+    <div class="section-title stats-head"><div><span>02 — ON-CHAIN STATS · ARBITRUM ONE</span><h2 id="statistics-heading">DC2 协议统计</h2></div><span id="stats-updated" role="status">正在读取链上数据…</span></div>
+    <div class="stats-grid">
+      <article><span>已登记身份</span><strong id="stats-registered">—</strong><small>GitHub ID · 按链上 Registered 事件统计</small></article>
+      <article><span>每日发行速度</span><strong><span id="stats-daily">—</span> <em>DC2/天</em></strong><small>每份登记资格每天累计 1 DC2</small></article>
+      <article><span>已铸造总供应量</span><strong><span id="stats-supply">—</span> <em>DC2</em></strong><small>ERC-20 totalSupply · 不包含尚未 Claim 部分</small></article>
+      <article><span>尚未领取的累计额</span><strong><span id="stats-unclaimed">—</span> <em>DC2</em></strong><small>按登记时间累计 − 已铸造总量</small></article>
+    </div>
+    <p class="fineprint">数据来自 Arbitrum One 同一链上区块，每分钟同步一次。累计额属于领取权，不等于已流通代币；转账不会改变总供应量。</p>
+  </section>
   <section class="protocol-info" aria-labelledby="protocol-heading">
     <div class="section-title"><span>ON-CHAIN · ARBITRUM ONE</span><h2 id="protocol-heading">规则公开，合约可验证。</h2></div>
     <p>GitHub 资格需要同时满足：账户满 <strong>7 年</strong>、自有非 Fork 仓库累计至少 <strong>10 Star</strong>、向第三方仓库提交至少 <strong>10 个已合并 PR</strong>、至少 <strong>10 Followers</strong>。满足条件后自行连接钱包登记并支付 Arbitrum One Gas；资格永久有效，每天累计 1 DC2。</p>

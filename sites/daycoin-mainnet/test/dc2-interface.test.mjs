@@ -275,3 +275,22 @@ test('Claim requires user confirmation, uses fixed selector, and waits for recei
   assert.deepEqual(events,[]);
   await context.close();
 });
+
+
+test('public protocol statistics show without GitHub login or wallet', async () => {
+  const context=await browser.newContext({viewport:{width:1100,height:800}});
+  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/api/dc2/config',route=>route.fulfill({json:{loginReady:true}}));
+  await page.route('**/api/dc2/me',route=>route.fulfill({json:{authenticated:false}}));
+  await page.route('**/api/dc2/stats',route=>route.fulfill({json:{chainId:42161,
+    contract:'0xD891dc80535e885E5893B8139902F90F6aBA086b',
+    registered:2,dailyRate:2,totalSupply:'0.25',unclaimed:'1.5555555555',
+    blockNumber:523900000,timestamp:1794500000}}));
+  await page.goto(base+'/dc2/');
+  await page.locator('#stats-registered').filter({hasText:'2'}).waitFor();
+  assert.equal(await page.locator('#stats-daily').innerText(),'2');
+  assert.equal(await page.locator('#stats-supply').innerText(),'0.25');
+  assert.equal(await page.locator('#stats-unclaimed').innerText(),'1.55555');
+  assert.equal(await page.locator('#account').isVisible(),false);
+  assert.deepEqual(errors,[]);await context.close();
+});

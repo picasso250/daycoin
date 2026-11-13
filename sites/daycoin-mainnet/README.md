@@ -89,3 +89,11 @@ The zero-framework DC2 site lives at `/dc2/`. The verified immutable ERC-20 is d
 ## Homepage version routing (2026-11-12)
 
 The root `/` redirects to `/dc2/`. The existing Ethereum DC1 wallet remains at `/dc1/`, with the historic Chinese page `/zh/`. The Cloudflare build copies the generated DC1 home to `/dc1/index.html`. OAuth Homepage URL uses the stable domain root; callback stays `/api/dc2/callback`.
+
+
+### DC2 public protocol stats
+
+`/dc2/#statistics` contains a wallet-free / login-free Arbitrum One statistics section.
+`GET /api/dc2/stats` reads `Registered` logs from deployment block **523527970** and the DC2 ERC-20 `totalSupply()` **at the same block**. Every registration earns 1 DC2 per 86,400 seconds; the global accrued total is the sum of individually rounded positions. Unclaimed = accrued − minted `totalSupply`, not circulating wallet balances. The response is cached for ~60 seconds, and the page refreshes on that interval.
+
+**Scalability boundary:** This first implementation scans the chain's registration log history on cache misses. It fails closed after 2,000 events or on RPC errors, rather than showing a false total. As participation grows, replace this scan with a verified, incrementally indexed event cursor (e.g. D1). The summary is a block snapshot, not a financial guarantee.
